@@ -203,6 +203,28 @@ export const PIONEERS: PioneerProfile[] = [
   },
 ];
 
+export const CHAPTER_INFO = {
+  name: "SSN ACM-W Student Chapter",
+  charter: "Charter #108544",
+  institution: "SSN College of Engineering",
+  location: "Kalavakkam, Chennai, Tamil Nadu, India",
+  established: "2018",
+  mission: "Empowering women in computing, cultivating research fellowships, championing peer mentorship, and fostering technical excellence across competitive hackathons, open science, and community outreach.",
+  facultyCoordinator: {
+    name: "Dr. P. Mirunalini",
+    title: "Faculty Coordinator",
+    designation: "Associate Professor, Department of Computer Science and Engineering",
+    department: "Department of Computer Science and Engineering",
+    bio: "Guiding the SSN ACM-W Student Chapter towards academic excellence, global hackathon achievements, and rural digital literacy initiatives.",
+    avatarUrl: "",
+  },
+  get facultySponsor() {
+    return this.facultyCoordinator;
+  },
+};
+
+export const FACULTY_COORDINATOR = CHAPTER_INFO.facultyCoordinator;
+
 export const EVENTS: EventRecord[] = [
   {
     id: "EVNT-01",

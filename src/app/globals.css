@@ -1,7 +1,412 @@
 @import "tailwindcss";
 
-body {
-  background: #09090b;
-  color: #fafafa;
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  :root {
+    /* Handbook Exact Foundation Tokens */
+    --color-graphite: #0D131C;      /* Root background, intro, mosaic negative space */
+    --color-acmw-blue: #1595D0;     /* Core branding, selected strokes, technical accents */
+    --color-acmw-pink: #ED247A;     /* Brand contrast, energized segments, accent controls */
+    --color-ocean-teal: #278F9B;    /* Outreach and cool photographic treatments */
+    --color-dusty-rose: #C96C8E;    /* Editorial and people-focused image grading */
+    --color-soft-pearl: #F5F8FA;    /* Light text, highlight points, active thread core */
+
+    /* Surface Tokens Derived from Graphite Midnight */
+    --surface-base: #0D131C;
+    --surface-1: #131A26;
+    --surface-2: #1A2434;
+    --surface-border: #233147;
+    --surface-border-subtle: rgba(245, 248, 250, 0.08);
+
+    /* Text Hierarchy */
+    --text-primary: #F5F8FA;
+    --text-secondary: #94A3B8;
+    --text-muted: #64748B;
+  }
+
+  html, body {
+    /*
+     * Clip horizontal overflow without creating a second vertical scroll
+     * container on BODY. Using overflow-x:hidden here can compute the visible
+     * vertical axis to auto, leaving BODY with its own scrollTop range while
+     * HTML also scrolls the document.
+     */
+    overflow-x: clip;
+    overflow-y: visible;
+    max-width: 100%;
+  }
+
+  body {
+    background-color: var(--color-graphite);
+    color: var(--color-soft-pearl);
+    font-family: 'DM Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Expressive Editorial Display Serif */
+  h1, h2, h3, .font-editorial, .font-serif {
+    font-family: 'Cormorant Garamond', 'Newsreader', 'EB Garamond', Georgia, serif;
+    letter-spacing: -0.015em;
+  }
+
+  /* UI & Content Sans */
+  p, span, button, input, .font-sans {
+    font-family: 'DM Sans', 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Technical Badges and Monospace (Restrained) */
+  code, kbd, samp, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Custom Scrollbars in Graphite & ACM-W Blue */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0D131C;
+}
+::-webkit-scrollbar-thumb {
+  background: #233147;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #1595D0;
+}
+
+/* Luminous Thread Layer: Blue -> Soft Pearl -> Pink with subtle bloom */
+.thread-luminous {
+  filter: drop-shadow(0 0 5px rgba(21, 149, 208, 0.8)) drop-shadow(0 0 14px rgba(237, 36, 122, 0.4));
+}
+
+.thread-glow-blue {
+  filter: drop-shadow(0 0 5px rgba(21, 149, 208, 0.75)) drop-shadow(0 0 15px rgba(21, 149, 208, 0.3));
+}
+
+.thread-glow-pink {
+  filter: drop-shadow(0 0 5px rgba(237, 36, 122, 0.75)) drop-shadow(0 0 15px rgba(237, 36, 122, 0.3));
+}
+
+.thread-glow-teal {
+  filter: drop-shadow(0 0 5px rgba(39, 143, 155, 0.75)) drop-shadow(0 0 15px rgba(39, 143, 155, 0.3));
+}
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Shared atmospheric language: layered light, very slow movement and no decorative noise. */
+.mosaic-atmosphere {
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse at 16% 40%, rgba(21, 149, 208, 0.14) 0%, transparent 36%),
+    radial-gradient(ellipse at 84% 54%, rgba(212, 163, 89, 0.105) 0%, transparent 34%),
+    radial-gradient(ellipse at 50% 100%, rgba(39, 143, 155, 0.075) 0%, transparent 40%),
+    linear-gradient(180deg, #090F17 0%, #0D131C 58%, #0B141D 100%);
+}
+
+.mosaic-atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: -3% -1%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 20% 26%, rgba(229, 169, 60, 0.15), transparent 22%),
+    radial-gradient(ellipse at 76% 34%, rgba(21, 149, 208, 0.13), transparent 27%),
+    radial-gradient(ellipse at 48% 88%, rgba(39, 143, 155, 0.11), transparent 30%);
+  opacity: 0.82;
+  animation: acmw-atmosphere-drift 42s ease-in-out infinite alternate;
+}
+
+.mosaic-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: -12% -18%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(112deg, transparent 28%, rgba(245, 248, 250, 0.025) 42%, rgba(212, 163, 89, 0.045) 48%, transparent 61%),
+    radial-gradient(ellipse at 50% 50%, rgba(245, 248, 250, 0.035), transparent 64%);
+  opacity: 0.6;
+  mask-image: radial-gradient(ellipse at center, #000 8%, transparent 82%);
+  animation: acmw-light-sweep 52s ease-in-out infinite alternate;
+}
+
+/* Fork atmosphere: transparent container seamlessly blending with unified page atmosphere */
+.fork-atmosphere {
+  isolation: isolate;
+  background: transparent;
+}
+
+.mosaic-perimeter-highlight {
+  opacity: 0.78;
+}
+
+@keyframes acmw-atmosphere-drift {
+  0% { transform: translate3d(-0.8%, -0.4%, 0) scale(1); }
+  100% { transform: translate3d(0.9%, 0.5%, 0) scale(1.035); }
+}
+
+@keyframes acmw-light-sweep {
+  0% { transform: translate3d(-1.1%, 0.2%, 0) scale(1); }
+  100% { transform: translate3d(1.1%, -0.2%, 0) scale(1.035); }
+}
+
+/* Living Atmospheric Air Pockets (Fluid Ambient Orbs - C-01, C-03, C-07)
+   Simulates organic air pockets/currents floating and undulating in water. */
+@keyframes acmw-air-pocket-1 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.72;
+  }
+  30% {
+    transform: translate3d(65px, -45px, 0) scale(1.12);
+    opacity: 0.95;
+  }
+  65% {
+    transform: translate3d(-50px, 35px, 0) scale(0.92);
+    opacity: 0.65;
+  }
+  100% {
+    transform: translate3d(35px, -25px, 0) scale(1.06);
+    opacity: 0.88;
+  }
+}
+
+@keyframes acmw-air-pocket-2 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.7;
+  }
+  38% {
+    transform: translate3d(-70px, 50px, 0) scale(1.14);
+    opacity: 0.96;
+  }
+  72% {
+    transform: translate3d(55px, -35px, 0) scale(0.90);
+    opacity: 0.62;
+  }
+  100% {
+    transform: translate3d(-30px, 25px, 0) scale(1.05);
+    opacity: 0.85;
+  }
+}
+
+@keyframes acmw-air-pocket-3 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.75;
+  }
+  32% {
+    transform: translate3d(60px, 45px, 0) scale(0.91);
+    opacity: 0.60;
+  }
+  68% {
+    transform: translate3d(-55px, -60px, 0) scale(1.13);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate3d(30px, -20px, 0) scale(1.03);
+    opacity: 0.82;
+  }
+}
+
+@keyframes acmw-air-pocket-4 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 0.68;
+  }
+  45% {
+    transform: translate3d(-50px, -45px, 0) scale(1.11);
+    opacity: 0.94;
+  }
+  80% {
+    transform: translate3d(55px, 50px, 0) scale(0.92);
+    opacity: 0.66;
+  }
+  100% {
+    transform: translate3d(-20px, 20px, 0) scale(1.04);
+    opacity: 0.84;
+  }
+}
+
+.acmw-air-pocket-1 {
+  animation: acmw-air-pocket-1 10s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.acmw-air-pocket-2 {
+  animation: acmw-air-pocket-2 13s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.acmw-air-pocket-3 {
+  animation: acmw-air-pocket-3 11s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.acmw-air-pocket-4 {
+  animation: acmw-air-pocket-4 14s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.acmw-atmosphere-sweep {
+  animation: acmw-light-sweep 52s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.mosaic-atmosphere > *,
+.fork-atmosphere > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* The desktop fork heading is an overlay annotation; it must not add vertical
+   flow before the branch root or interrupt the incoming parent thread. */
+.fork-atmosphere > [data-testid="fork-editorial-title"] {
+  position: absolute;
+  z-index: 20;
+}
+
+/* Timeline Light Strobing: pulses of light continuously streaming down the timeline */
+@keyframes acmw-timeline-strobe-flow-1 {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -1140px;
+  }
+}
+
+@keyframes acmw-timeline-strobe-flow-2 {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -860px;
+  }
+}
+
+.timeline-strobe-primary {
+  animation: acmw-timeline-strobe-flow-1 2.6s linear infinite;
+}
+
+.timeline-strobe-secondary {
+  animation: acmw-timeline-strobe-flow-2 1.8s linear infinite;
+}
+
+/* Suspended Light Particles: organic drifting, breathing, and shimmer around the travelling spark */
+@keyframes acmw-particle-drift-a {
+  0% { transform: translate3d(-3px, -4px, 0) scale(0.85); opacity: 0.45; }
+  50% { transform: translate3d(4px, 2px, 0) scale(1.2); opacity: 0.95; }
+  100% { transform: translate3d(-2px, 5px, 0) scale(0.9); opacity: 0.6; }
+}
+
+@keyframes acmw-particle-drift-b {
+  0% { transform: translate3d(4px, -2px, 0) scale(1.15); opacity: 0.85; }
+  50% { transform: translate3d(-3px, 4px, 0) scale(0.8); opacity: 0.4; }
+  100% { transform: translate3d(2px, -5px, 0) scale(1.1); opacity: 0.95; }
+}
+
+@keyframes acmw-particle-drift-c {
+  0% { transform: translate3d(-2px, 3px, 0) scale(0.9); opacity: 0.5; }
+  50% { transform: translate3d(3px, -5px, 0) scale(1.25); opacity: 1; }
+  100% { transform: translate3d(-4px, -2px, 0) scale(0.85); opacity: 0.55; }
+}
+
+.particle-suspended {
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.particle-drift-a {
+  animation: acmw-particle-drift-a ease-in-out infinite alternate;
+}
+
+.particle-drift-b {
+  animation: acmw-particle-drift-b ease-in-out infinite alternate;
+}
+
+.particle-drift-c {
+  animation: acmw-particle-drift-c ease-in-out infinite alternate;
+}
+
+/* Thread Body Light Particles: subtle organic floating, breathing, and twinkling around the thread body */
+@keyframes acmw-thread-particle-drift-1 {
+  0% { transform: translate3d(-2px, -2.5px, 0) scale(0.88); }
+  50% { transform: translate3d(2.5px, 1.5px, 0) scale(1.18); }
+  100% { transform: translate3d(-1px, 2px, 0) scale(0.92); }
+}
+
+@keyframes acmw-thread-particle-drift-2 {
+  0% { transform: translate3d(2px, -1.5px, 0) scale(1.12); }
+  50% { transform: translate3d(-2.5px, 2px, 0) scale(0.85); }
+  100% { transform: translate3d(1.5px, -2px, 0) scale(1.05); }
+}
+
+@keyframes acmw-thread-particle-drift-3 {
+  0% { transform: translate3d(-1.5px, 2px, 0) scale(0.92); }
+  50% { transform: translate3d(2px, -2px, 0) scale(1.22); }
+  100% { transform: translate3d(-2px, -1px, 0) scale(0.88); }
+}
+
+@keyframes acmw-thread-particle-drift-4 {
+  0% { transform: translate3d(1.8px, 2px, 0) scale(0.9); }
+  50% { transform: translate3d(-1.8px, -1.8px, 0) scale(1.15); }
+  100% { transform: translate3d(2.2px, -1px, 0) scale(0.95); }
+}
+
+.thread-body-particle {
+  transform-box: fill-box;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.thread-particle-drift-1 {
+  animation: acmw-thread-particle-drift-1 ease-in-out infinite alternate;
+}
+
+.thread-particle-drift-2 {
+  animation: acmw-thread-particle-drift-2 ease-in-out infinite alternate;
+}
+
+.thread-particle-drift-3 {
+  animation: acmw-thread-particle-drift-3 ease-in-out infinite alternate;
+}
+
+.thread-particle-drift-4 {
+  animation: acmw-thread-particle-drift-4 ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mosaic-atmosphere::before,
+  .mosaic-atmosphere::after,
+  .fork-atmosphere::before,
+  .fork-atmosphere::after,
+  .acmw-air-pocket-1,
+  .acmw-air-pocket-2,
+  .acmw-air-pocket-3,
+  .acmw-air-pocket-4,
+  .acmw-atmosphere-sweep,
+  .timeline-strobe-primary,
+  .timeline-strobe-secondary,
+  .particle-suspended,
+  .particle-drift-a,
+  .particle-drift-b,
+  .particle-drift-c,
+  .thread-body-particle,
+  .thread-particle-drift-1,
+  .thread-particle-drift-2,
+  .thread-particle-drift-3,
+  .thread-particle-drift-4 {
+    animation: none !important;
+  }
 }
