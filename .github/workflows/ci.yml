@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   checks:
-    name: Lint, typecheck, tests, and build
+    name: Lint, typecheck, and build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
