@@ -25,7 +25,7 @@ export const MilestoneThematicSymbol: React.FC<ThematicSymbolProps> = ({
       // Ada Lovelace: Jacquard Loom / Babbage Analytical Cog
       return (
         <svg
-          data-testid="thematic-symbol-PION-01"
+          data-testid="thematic-symbol-pion-01"
           viewBox="0 0 24 24"
           fill="none"
           stroke={color}
@@ -52,7 +52,7 @@ export const MilestoneThematicSymbol: React.FC<ThematicSymbolProps> = ({
       // Grace Hopper: Compiler & Terminal Logic Prompt
       return (
         <svg
-          data-testid="thematic-symbol-PION-02"
+          data-testid="thematic-symbol-pion-02"
           viewBox="0 0 24 24"
           fill="none"
           stroke={color}
@@ -72,7 +72,7 @@ export const MilestoneThematicSymbol: React.FC<ThematicSymbolProps> = ({
       // Katherine Johnson: Orbital Mechanics & Space Trajectory
       return (
         <svg
-          data-testid="thematic-symbol-PION-03"
+          data-testid="thematic-symbol-pion-03"
           viewBox="0 0 24 24"
           fill="none"
           stroke={color}
@@ -92,7 +92,7 @@ export const MilestoneThematicSymbol: React.FC<ThematicSymbolProps> = ({
       // Margaret Hamilton: Apollo 11 Saturn V Rocket & Guidance Computer
       return (
         <svg
-          data-testid="thematic-symbol-PION-04"
+          data-testid="thematic-symbol-pion-04"
           viewBox="0 0 24 24"
           fill="none"
           stroke={color}
@@ -114,7 +114,7 @@ export const MilestoneThematicSymbol: React.FC<ThematicSymbolProps> = ({
       // Radia Perlman: Spanning Tree Protocol & Robust Network Mesh
       return (
         <svg
-          data-testid="thematic-symbol-PION-05"
+          data-testid="thematic-symbol-pion-05"
           viewBox="0 0 24 24"
           fill="none"
           stroke={color}
@@ -138,7 +138,7 @@ export const MilestoneThematicSymbol: React.FC<ThematicSymbolProps> = ({
       // Fei-Fei Li: ImageNet & Visual Neural Intelligence
       return (
         <svg
-          data-testid="thematic-symbol-PION-06"
+          data-testid="thematic-symbol-pion-06"
           viewBox="0 0 24 24"
           fill="none"
           stroke={color}
