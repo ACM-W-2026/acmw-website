@@ -91,7 +91,9 @@ export const HISTORICAL_MILESTONES: HistoricalMilestone[] = [
     contributionTitle: "Asynchronous Software Engineering",
     contributionSummary: "Director of the MIT Software Engineering Division for the Apollo 11 Guidance Computer. Created priority-scheduled asynchronous task execution that prevented lunar landing abort under radar overload.",
     quote: "There was no choice but to be pioneers; no one had done it before.",
-    // Uncleared portrait paths omitted per asset governance; renders MilestoneThematicSymbol fallback
+    portraitUrl: "/assets/pioneers/margaret-hamilton.jpg",
+    silhouetteUrl: "/assets/pioneers/silhouette/margaret-hamilton-silhouette.webp",
+    cutoutUrl: "/assets/pioneers/cutout/margaret-hamilton-cutout.webp",
     verifiedSourceIds: ["HIST-04", "SRC-HAMILTON"],
     publicationStatus: "approved",
     accentField: "Systems & Fault-Tolerant Architectures",
@@ -107,7 +109,9 @@ export const HISTORICAL_MILESTONES: HistoricalMilestone[] = [
     contributionTitle: "The Algorithmic Foundation of the Internet",
     contributionSummary: "Invented the Spanning Tree Protocol (STP), transforming Ethernet from localized fragile loops into scalable, robust, self-healing networks that underpin modern telecommunications.",
     quote: "I wanted to invent something that people could just plug in and it would work without thinking.",
-    // Uncleared portrait paths omitted per asset governance; renders MilestoneThematicSymbol fallback
+    portraitUrl: "/assets/pioneers/radia-perlman.jpg",
+    silhouetteUrl: "/assets/pioneers/silhouette/radia-perlman-silhouette.webp",
+    cutoutUrl: "/assets/pioneers/cutout/radia-perlman-cutout.webp",
     verifiedSourceIds: ["HIST-05", "SRC-PERLMAN"],
     publicationStatus: "approved",
     accentField: "Distributed Systems & Routing Protocols",
@@ -123,7 +127,9 @@ export const HISTORICAL_MILESTONES: HistoricalMilestone[] = [
     contributionTitle: "ImageNet & Modern Visual Intelligence",
     contributionSummary: "Spearheaded the creation of ImageNet, a massive ontological dataset of 14M+ annotated images that catalysed the deep learning revolution and transformed modern artificial intelligence.",
     quote: "If we want technology to serve humanity, it must be shaped by humanity as a whole.",
-    // Uncleared portrait paths omitted per asset governance; renders MilestoneThematicSymbol fallback
+    portraitUrl: "/assets/pioneers/fei-fei-li.jpg",
+    silhouetteUrl: "/assets/pioneers/silhouette/fei-fei-li-silhouette.webp",
+    cutoutUrl: "/assets/pioneers/cutout/fei-fei-li-cutout.webp",
     verifiedSourceIds: ["HIST-06", "SRC-LIFEEFEI"],
     publicationStatus: "approved",
     accentField: "Computer Vision & Cognitive Intelligence",

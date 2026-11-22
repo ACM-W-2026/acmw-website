@@ -281,11 +281,7 @@ export const TerminalFork: React.FC<TerminalForkProps> = ({
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [hoveredBranch, setHoveredBranch] = useState<string | null>(null);
   const [draggedBranchKey, setDraggedBranchKey] = useState<string | null>(null);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      : false
-  );
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const isTransitioningRef = useRef(false);
   const transitionTimeoutRef = useRef<number | null>(null);
   const wakeRenderLoopRef = useRef<(() => void) | null>(null);

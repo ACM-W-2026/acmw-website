@@ -44,8 +44,8 @@ interface MilestoneGeometry {
 const CARD_FORMATION_LEAD_VIEWBOX_UNITS = 72;
 const EXHIBITION_FORMATION_LEAD_VIEWBOX_UNITS = 420;
 const RESPONSIVE_FORMATION_LEAD_VIEWBOX_UNITS = 420;
-const EXHIBITION_MIN_VIEWPORT_WIDTH = 1200;
-const EXHIBITION_MIN_VIEWPORT_HEIGHT = 700;
+const EXHIBITION_MIN_VIEWPORT_WIDTH = 1024;
+const EXHIBITION_MIN_VIEWPORT_HEIGHT = 600;
 // More native-scroll runway between each encounter gives the visitor time to
 // register the arrival instead of letting one ordinary wheel gesture skip it.
 const TIMELINE_STAGE_HEIGHT = 8000;
@@ -235,37 +235,23 @@ const PARTICLE_COLORS = [
 function getExhibitionGeometry(
   base: MilestoneGeometry,
   viewportWidth: number,
-  viewportHeight: number,
-  pathLength: number,
-  anchorProgress: number,
-  formationLeadUnits: number
+  _viewportHeight: number,
+  _pathLength: number,
+  _anchorProgress: number,
+  _formationLeadUnits: number
 ): MilestoneGeometry {
-  const panelWidthCss = Math.min(940, Math.max(880, viewportWidth * 0.72));
-  const panelHeightCss = Math.min(520, Math.max(440, viewportWidth * 0.32));
-  const margin = 24;
-  const historyScrollRange = Math.max(1, TIMELINE_STAGE_HEIGHT - viewportHeight);
-  const leadScrollCss =
-    (formationLeadUnits / Math.max(pathLength, 1)) * historyScrollRange;
-  const scrollAtAnchor = anchorProgress * historyScrollRange;
-  const anchorViewportY = base.anchorY * TIMELINE_SVG_SCALE - scrollAtAnchor;
-  const maxTop = Math.max(
-    margin,
-    viewportHeight - margin - panelHeightCss
-  );
-  const desiredTop = anchorViewportY - panelHeightCss / 2;
-  const topAtArrival = Math.min(Math.max(desiredTop, margin), maxTop);
+  const panelWidthCss = Math.min(940, Math.max(840, viewportWidth * 0.72));
+  const panelHeightCss = Math.min(500, Math.max(420, viewportWidth * 0.32));
   const cardWidth = panelWidthCss / TIMELINE_SVG_SCALE;
   const cardHeight = panelHeightCss / TIMELINE_SVG_SCALE;
 
   // Symmetrical Bilateral Placement across thread center (X = 500)
+  // Perfectly centered on base.anchorY so the anchor dot and bilateral split line are exactly in the middle of the card
   const cardX = 500 - cardWidth / 2;
-  const cardY = (scrollAtAnchor + topAtArrival) / TIMELINE_SVG_SCALE;
+  const cardY = base.anchorY - cardHeight / 2;
   const anchorY = base.anchorY; // CANONICAL ANCHOR Y PRESERVED (846, 1946, 3046...)
-  const entryY = base.anchorY; // STRICTLY HORIZONTAL BRANCHING (Issue 4 Fix - zero V-sag)
-
-  // Bounds stabilization offset during approach to keep panel strictly inside [12, viewportHeight - 12]
-  const approachBottom = topAtArrival + leadScrollCss + panelHeightCss;
-  const approachOffset = Math.max(0, approachBottom - (viewportHeight - 24));
+  const entryY = base.anchorY; // STRICTLY HORIZONTAL BRANCHING (zero V-sag)
+  const approachOffset = 0;
 
   // 35% Left Wing (Pioneer Cutout), 30% Corridor (Thread at 500), 35% Right Wing (Crystalline Codex Scroll)
   const cutoutRightX = cardX + cardWidth * 0.35;
@@ -389,16 +375,24 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
     }
   };
 
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
-    typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)").matches : false
-  );
-  const [viewportSize, setViewportSize] = useState(() => ({
-    width: typeof window === "undefined" ? 1024 : window.innerWidth,
-    height: typeof window === "undefined" ? 768 : window.innerHeight,
-  }));
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [viewportSize, setViewportSize] = useState({
+    width: 1280,
+    height: 800,
+  });
   const [pathMetrics, setPathMetrics] = useState<TimelinePathMetrics | null>(null);
 
   useEffect(() => {
+    // 1. Immediately sync actual client viewport dimensions after hydration
+    setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+
+    // 2. Synchronize user motion preference
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(motionQuery.matches);
+    const motionHandler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    motionQuery.addEventListener("change", motionHandler);
+
+    // 3. Dynamic resize handler with requestAnimationFrame debounce
     let resizeFrame = 0;
     const updateViewport = () => {
       if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
@@ -408,7 +402,9 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
       });
     };
     window.addEventListener("resize", updateViewport);
+
     return () => {
+      motionQuery.removeEventListener("change", motionHandler);
       window.removeEventListener("resize", updateViewport);
       if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
     };
@@ -447,8 +443,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
 
   const isExhibitionViewport =
     viewportSize.width >= EXHIBITION_MIN_VIEWPORT_WIDTH &&
-    viewportSize.height >= EXHIBITION_MIN_VIEWPORT_HEIGHT &&
-    pathMetrics !== null;
+    viewportSize.height >= EXHIBITION_MIN_VIEWPORT_HEIGHT;
   const exhibitionPanelHeightCss = Math.min(520, Math.max(420, viewportSize.width * 0.304));
   const responsivePanelHeightCss = viewportSize.width < 480 ? 360 : 320;
   const exhibitionFormationLeadUnits = pathMetrics
@@ -468,48 +463,79 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
       )
     : RESPONSIVE_FORMATION_LEAD_VIEWBOX_UNITS;
 
-  // Responsive exhibits are positioned at a consistent, readable viewport
+  // Responsive and Exhibition exhibits are positioned at a consistent, readable viewport
   // band when the travelling light reaches their station. The document remains
   // the native scroll authority; this piecewise map only changes how story
   // progress is distributed across that existing native range.
-  const responsiveHistoryProgressMap = useMemo<JourneyProgressMapPoint[] | null>(() => {
-    if (!isResponsiveComposition || !pathMetrics || pathMetrics.pathLength <= 0) {
+  const historyProgressMap = useMemo<JourneyProgressMapPoint[] | null>(() => {
+    if (!pathMetrics || pathMetrics.pathLength <= 0) {
       return null;
     }
-    const scrollRange = Math.max(
-      1,
-      RESPONSIVE_TIMELINE_STAGE_HEIGHT - viewportSize.height
-    );
-    const stageScale =
-      RESPONSIVE_TIMELINE_STAGE_HEIGHT / RESPONSIVE_VIEWBOX_HEIGHT;
-    const panelHeight = responsivePanelHeightCss;
-    const halfPanel = panelHeight / 2;
-    const formationWindowPx =
-      (responsiveFormationLeadUnits / pathMetrics.pathLength) * scrollRange;
-    const minCenter = halfPanel + scrollRange * 0.01 + 2;
-    const maxCenter = viewportSize.height - halfPanel - formationWindowPx - 2;
-    const targetCenter = Math.min(
-      maxCenter,
-      Math.max(minCenter, viewportSize.height * 0.32)
-    );
+    if (isResponsiveComposition) {
+      const scrollRange = Math.max(
+        1,
+        RESPONSIVE_TIMELINE_STAGE_HEIGHT - viewportSize.height
+      );
+      const stageScale =
+        RESPONSIVE_TIMELINE_STAGE_HEIGHT / RESPONSIVE_VIEWBOX_HEIGHT;
+      const panelHeight = responsivePanelHeightCss;
+      const halfPanel = panelHeight / 2;
+      const formationWindowPx =
+        (responsiveFormationLeadUnits / pathMetrics.pathLength) * scrollRange;
+      const minCenter = halfPanel + scrollRange * 0.01 + 2;
+      const maxCenter = viewportSize.height - halfPanel - formationWindowPx - 2;
+      const targetCenter = Math.min(
+        maxCenter,
+        Math.max(minCenter, viewportSize.height * 0.32)
+      );
 
-    return [
-      { nativeProgress: 0, timelineProgress: 0 },
-      ...APPROVED_HISTORICAL_MILESTONES.map((milestone, index) => {
-        const anchorY = RESPONSIVE_MILESTONE_ANCHORS[index];
-        const nativeScrollAtArrival = anchorY * stageScale - targetCenter;
-        return {
-          nativeProgress: Math.max(
-            0,
-            Math.min(1, nativeScrollAtArrival / scrollRange)
-          ),
-          timelineProgress: pathMetrics.anchorProgresses[milestone.id] ?? 0,
-        };
-      }),
-      { nativeProgress: 1, timelineProgress: 1 },
-    ];
+      return [
+        { nativeProgress: 0, timelineProgress: 0 },
+        ...APPROVED_HISTORICAL_MILESTONES.map((milestone, index) => {
+          const anchorY = RESPONSIVE_MILESTONE_ANCHORS[index];
+          const nativeScrollAtArrival = anchorY * stageScale - targetCenter;
+          return {
+            nativeProgress: Math.max(
+              0,
+              Math.min(1, nativeScrollAtArrival / scrollRange)
+            ),
+            timelineProgress: pathMetrics.anchorProgresses[milestone.id] ?? 0,
+          };
+        }),
+        { nativeProgress: 1, timelineProgress: 1 },
+      ];
+    }
+
+    if (isExhibitionViewport) {
+      const scrollRange = Math.max(
+        1,
+        TIMELINE_STAGE_HEIGHT - viewportSize.height
+      );
+      const stageScale = TIMELINE_SVG_SCALE;
+      const targetCenter = Math.round(viewportSize.height * 0.44);
+
+      return [
+        { nativeProgress: 0, timelineProgress: 0 },
+        ...APPROVED_HISTORICAL_MILESTONES.map((milestone) => {
+          const base = MILESTONE_GEOMETRIES[milestone.id];
+          const anchorY = base?.anchorY ?? 0;
+          const nativeScrollAtArrival = anchorY * stageScale - targetCenter;
+          return {
+            nativeProgress: Math.max(
+              0,
+              Math.min(1, nativeScrollAtArrival / scrollRange)
+            ),
+            timelineProgress: pathMetrics.anchorProgresses[milestone.id] ?? 0,
+          };
+        }),
+        { nativeProgress: 1, timelineProgress: 1 },
+      ];
+    }
+
+    return null;
   }, [
     isResponsiveComposition,
+    isExhibitionViewport,
     pathMetrics,
     responsivePanelHeightCss,
     responsiveFormationLeadUnits,
@@ -774,7 +800,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
           const geo = milestoneGeometries[m.id];
           const approachOffset = geo?.approachOffset || 0;
           const openingClip = isExhibitionViewport
-            ? "inset(0% 48% 0% 48%)"
+            ? "none"
             : getContactEdgeClip(geo?.isLeft ?? false);
           gsap.set(card, {
             autoAlpha: 0,
@@ -806,7 +832,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         if (surface) gsap.set(surface, { opacity: 0 });
 
         const portrait = portraitRefs.current[m.id];
-        if (portrait) gsap.set(portrait, { autoAlpha: 0, scale: 1.08 });
+        if (portrait) gsap.set(portrait, { autoAlpha: 0, scale: 0.92, y: 14 });
 
         const identity = identityRefs.current[m.id];
         if (identity) gsap.set(identity, { autoAlpha: 1, y: 0 });
@@ -991,9 +1017,13 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         const content = contentRefs.current[milestone.id];
 
         const leftConnector = leftConnectorRefs.current[milestone.id];
-        // Synchronized Bilateral Connector Expansion (Issue 2 Fix: start as spark nears station)
-        const connectorStart = approachProgress + formationLeadProgress * 0.55;
-        const connectorDuration = formationLeadProgress * ((isExhibitionViewport || isResponsiveComposition) ? 0.35 : 0.45);
+        // Point-based Contact Trigger: branch only when travelling spark contacts station anchor dot
+        const connectorStart = isExhibitionViewport
+          ? approachProgress + formationLeadProgress * 0.96
+          : approachProgress + formationLeadProgress * 0.75;
+        const connectorDuration = isExhibitionViewport
+          ? formationLeadProgress * 0.06
+          : formationLeadProgress * 0.25;
 
         if (connector) {
           tl.to(
@@ -1010,19 +1040,19 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
               connector,
               {
                 strokeWidth: 3.6,
-                duration: formationLeadProgress * 0.10,
+                duration: connectorDuration * 0.40,
                 ease: "power2.out",
               },
-              connectorStart + connectorDuration * 0.60
+              connectorStart + connectorDuration * 0.35
             );
             tl.to(
               connector,
               {
                 strokeWidth: 2.4,
-                duration: formationLeadProgress * 0.10,
+                duration: connectorDuration * 0.40,
                 ease: "power2.out",
               },
-              connectorStart + connectorDuration * 0.85
+              connectorStart + connectorDuration * 0.75
             );
           }
         }
@@ -1041,30 +1071,30 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             leftConnector,
             {
               strokeWidth: 3.2,
-              duration: formationLeadProgress * 0.10,
+              duration: connectorDuration * 0.40,
               ease: "power2.out",
             },
-            connectorStart + connectorDuration * 0.60
+            connectorStart + connectorDuration * 0.35
           );
           tl.to(
             leftConnector,
             {
               strokeWidth: 2.2,
-              duration: formationLeadProgress * 0.10,
+              duration: connectorDuration * 0.40,
               ease: "power2.out",
             },
-            connectorStart + connectorDuration * 0.85
+            connectorStart + connectorDuration * 0.75
           );
         }
 
-        // The station charges up and blooms as the spark contacts the anchor (Issue 1 Fix)
+        // The station charges up and blooms as the spark contacts the anchor (Point-based Contact Trigger)
         if (anchor && (isExhibitionViewport || isResponsiveComposition)) {
           tl.to(
             anchor,
             {
               autoAlpha: 1,
-              scale: 1.35,
-              duration: formationLeadProgress * 0.18,
+              scale: 1.4,
+              duration: isExhibitionViewport ? formationLeadProgress * 0.06 : formationLeadProgress * 0.18,
               ease: "back.out(2)",
             },
             connectorStart
@@ -1073,10 +1103,10 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             anchor,
             {
               scale: 1,
-              duration: formationLeadProgress * 0.10,
+              duration: isExhibitionViewport ? formationLeadProgress * 0.05 : formationLeadProgress * 0.10,
               ease: "power2.out",
             },
-            approachProgress + formationLeadProgress * 0.90
+            connectorStart + (isExhibitionViewport ? formationLeadProgress * 0.06 : formationLeadProgress * 0.18)
           );
         }
 
@@ -1084,25 +1114,25 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         if (bead) {
           tl.to(
             bead,
-            { scale: 1.65, duration: formationLeadProgress * 0.12, ease: "power2.out" },
-            approachProgress + formationLeadProgress * 0.60
+            { scale: 1.65, duration: formationLeadProgress * 0.05, ease: "power2.out" },
+            connectorStart
           );
           tl.to(
             bead,
-            { scale: 1, duration: formationLeadProgress * 0.15, ease: "power2.out" },
-            approachProgress + formationLeadProgress * 0.75
+            { scale: 1, duration: formationLeadProgress * 0.06, ease: "power2.out" },
+            connectorStart + formationLeadProgress * 0.05
           );
         }
         if (beadGlow) {
           tl.to(
             beadGlow,
-            { scale: 1.5, duration: formationLeadProgress * 0.12, ease: "power2.out" },
-            approachProgress + formationLeadProgress * 0.60
+            { scale: 1.5, duration: formationLeadProgress * 0.05, ease: "power2.out" },
+            connectorStart
           );
           tl.to(
             beadGlow,
-            { scale: 1, duration: formationLeadProgress * 0.15, ease: "power2.out" },
-            approachProgress + formationLeadProgress * 0.75
+            { scale: 1, duration: formationLeadProgress * 0.06, ease: "power2.out" },
+            connectorStart + formationLeadProgress * 0.05
           );
         }
 
@@ -1187,19 +1217,11 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                 approachProgress
               );
             }
+            // Keep card container visible through entire encounter and exit runway down to 0.78 lead
             tl.to(
               card,
-              { autoAlpha: 1, duration: formationLeadProgress * 0.05, ease: "none" },
-              approachProgress + formationLeadProgress * 0.86
-            );
-            tl.to(
-              card,
-              {
-                clipPath: "inset(0% 0% 0% 0%)",
-                duration: formationLeadProgress * 0.12,
-                ease: "power2.inOut",
-              },
-              approachProgress + formationLeadProgress * 0.88
+              { autoAlpha: 1, duration: formationLeadProgress * 0.08, ease: "power1.out" },
+              approachProgress + formationLeadProgress * 0.78
             );
           }
           if (frame) {
@@ -1208,10 +1230,10 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
               {
                 strokeDashoffset: 0,
                 strokeOpacity: 0.25,
-                duration: formationLeadProgress * 0.12,
-                ease: "none",
+                duration: formationLeadProgress * 0.06,
+                ease: "power2.out",
               },
-              approachProgress + formationLeadProgress * 0.88
+              approachProgress + formationLeadProgress * 0.96
             );
           }
           if (surface) {
@@ -1219,22 +1241,24 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
               surface,
               {
                 opacity: 1,
-                duration: formationLeadProgress * 0.10,
+                duration: formationLeadProgress * 0.08,
                 ease: "power2.out",
               },
               approachProgress + formationLeadProgress * 0.88
             );
           }
           if (portrait) {
+            // Ethereal emergence of pioneer cutout: floats up from 14px, scales up from 0.92, and fades in smoothly
             tl.to(
               portrait,
               {
                 autoAlpha: 1,
                 scale: 1,
-                duration: formationLeadProgress * 0.11,
+                y: 0,
+                duration: formationLeadProgress * 0.14,
                 ease: "power2.out",
               },
-              approachProgress + formationLeadProgress * 0.89
+              approachProgress + formationLeadProgress * 0.92
             );
           }
         } else {
@@ -1320,11 +1344,11 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         const approachP = Math.max(0, anchorP - leadP);
         const recedeP = Math.min(1, anchorP + leadP * 0.95);
 
-        // Synchronize scroll unroll with visual entrance in GSAP (card fades in at approachP + leadP * 0.86)
-        // Three-phase hysteresis enables smooth reversible exit and prevents cached states (Issues 2 & 3 Fix)
-        const enterThreshold = approachP + leadP * 0.82;
-        const exitThreshold = approachP + leadP * 0.75;
-        const resetThreshold = approachP + leadP * 0.60;
+        // Point-based Contact Threshold: fire entrance literally on anchor contact (within ~8px of dot)
+        // Three-phase hysteresis enables smooth reversible exit and prevents cached states
+        const enterThreshold = isExhibitionViewport ? (anchorP - leadP * 0.02) : (approachP + leadP * 0.82);
+        const exitThreshold = isExhibitionViewport ? (anchorP - leadP * 0.08) : (approachP + leadP * 0.75);
+        const resetThreshold = isExhibitionViewport ? (anchorP - leadP * 0.20) : (approachP + leadP * 0.60);
 
         if (progress >= enterThreshold && progress <= recedeP) {
           scrollRefs.current[m.id]?.playEntrance();
@@ -1336,7 +1360,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
       });
     };
 
-    journeyProgressRef.current.historyMap = responsiveHistoryProgressMap;
+    journeyProgressRef.current.historyMap = historyProgressMap;
     journeyProgressRef.current.history = setHistoryProgress;
     journeyProgressRef.current.sync?.();
 
@@ -1347,7 +1371,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
       const anchorP = (pathMetrics?.anchorProgresses?.[m.id] ?? geo.anchorY / TIMELINE_STAGE_HEIGHT);
       const leadP = (isExhibitionViewport ? exhibitionFormationLeadUnits : responsiveFormationLeadUnits) / totalLen;
       const approachP = Math.max(0, anchorP - leadP);
-      const enterThreshold = approachP + leadP * 0.82;
+      const enterThreshold = isExhibitionViewport ? (anchorP - leadP * 0.02) : (approachP + leadP * 0.82);
       if (timeline.progress() >= enterThreshold) {
         scrollRefs.current[m.id]?.playEntrance();
       }
@@ -1368,7 +1392,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
     viewportSize.height,
     exhibitionFormationLeadUnits,
     responsiveFormationLeadUnits,
-    responsiveHistoryProgressMap,
+    historyProgressMap,
   ]);
 
   return (
@@ -1376,6 +1400,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
       ref={containerRef}
       id="thread-timeline"
       data-testid="thread-timeline"
+      suppressHydrationWarning
       className="relative w-full text-[#F5F8FA] selection:bg-[#1595D0]/30 selection:text-[#F5F8FA]"
       style={{ height: isResponsiveComposition ? `${RESPONSIVE_TIMELINE_STAGE_HEIGHT}px` : `${TIMELINE_STAGE_HEIGHT}px`, backgroundColor: "transparent" }}
       aria-label="The Thread We Carry — Darkness-First Historical Timeline"
@@ -1424,12 +1449,18 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
       </div>
 
       {/* Authoritative Shared SVG Stage: Timeline Thread, Stations, Connectors, Frame Traces, and ForeignObject Cards */}
-      <div className="relative w-full max-w-[1020px] mx-auto pointer-events-none z-20" style={{ height: isResponsiveComposition ? `${RESPONSIVE_TIMELINE_STAGE_HEIGHT}px` : `${TIMELINE_STAGE_HEIGHT}px` }}>
+      <div
+        className="relative w-full max-w-[1020px] mx-auto pointer-events-none z-20"
+        style={{ height: isResponsiveComposition ? `${RESPONSIVE_TIMELINE_STAGE_HEIGHT}px` : `${TIMELINE_STAGE_HEIGHT}px` }}
+        suppressHydrationWarning
+      >
         <svg
+          key={`timeline-svg-${isResponsiveComposition ? "responsive" : "desktop"}`}
           viewBox={isResponsiveComposition ? `0 0 ${responsiveStageWidth} ${RESPONSIVE_VIEWBOX_HEIGHT}` : `0 0 1000 ${DESKTOP_VIEWBOX_HEIGHT}`}
           preserveAspectRatio={isResponsiveComposition ? "none" : "xMidYMin meet"}
           className="absolute inset-0 w-full h-full overflow-visible"
           aria-hidden="true"
+          suppressHydrationWarning
         >
           <defs>
             {/* Canonical Luminous Thread Gradient Synchronized to Milestone Anchors */}
@@ -1745,6 +1776,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                   strokeWidth="3"
                   strokeOpacity="0.98"
                   strokeLinecap="round"
+                  style={{ strokeDasharray: 400, strokeDashoffset: 400, opacity: 0 }}
                 />
 
                 {/* Left Connector Branch to Pioneer Cutout (Synchronized Reveal, Hidden Until Arrival) */}
@@ -1762,6 +1794,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                     strokeWidth="2.5"
                     strokeOpacity="0.9"
                     strokeLinecap="round"
+                    style={{ strokeDasharray: 400, strokeDashoffset: 400, opacity: 0 }}
                   />
                 )}
 
@@ -1800,7 +1833,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                   width={geo.cardWidth}
                   height={geo.cardHeight}
                   aria-hidden="true"
-                  className="hidden min-[1200px]:block overflow-visible pointer-events-auto"
+                  className="hidden min-[1024px]:block overflow-visible pointer-events-auto"
                 >
                   {isExhibitionViewport ? (
                     <article
@@ -1811,7 +1844,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                       data-testid={`milestone-${m.id}`}
                       data-layout="immersive-split-exhibition"
                       className="group relative flex h-full w-full flex-row items-center pointer-events-auto bg-transparent cursor-default select-none"
-                      style={{ willChange: "transform, opacity", transform: "translate3d(0,0,0)" }}
+                      style={{ opacity: 0, visibility: "hidden", willChange: "transform, opacity", transform: "translate3d(0,0,0)" }}
                     >
                       {/* Zero-border surface node maintaining smoke test contract */}
                       <div
@@ -1828,6 +1861,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                           portraitRefs.current[m.id] = el;
                         }}
                         className="relative z-10 flex h-full w-[35%] shrink-0 flex-col items-center justify-center p-2 select-none"
+                        style={{ opacity: 0, visibility: "hidden" }}
                       >
                         {/* Ethereal radial back-glow */}
                         <div
@@ -1908,6 +1942,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                       id={`milestone-${m.id}`}
                       data-testid={`milestone-${m.id}`}
                       className="group relative w-full h-full p-5 sm:p-6 rounded-2xl flex flex-col justify-between cursor-default bg-transparent select-none"
+                      style={{ opacity: 0, visibility: "hidden" }}
                     >
                       {/* Zero-border surface maintaining smoke test contract */}
                       <div
@@ -2105,6 +2140,8 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                   width: `${geo.cardWidth}px`,
                   top: `calc(${topPercent}% - ${geo.cardHeight / 2}px)`,
                   height: `${geo.cardHeight}px`,
+                  opacity: 0,
+                  visibility: "hidden",
                 }}
               >
                 {/* Specular Top Edge Sheen */}

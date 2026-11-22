@@ -47,15 +47,6 @@ describe("Gated Asset Exclusion & Next.js Build-Artifact Protection", () => {
     "placeholder.jpeg",
 
     // Additional quarantined unverified/unlicensed media
-    "fei-fei-li.jpg",
-    "fei-fei-li-cutout.webp",
-    "fei-fei-li-silhouette.webp",
-    "margaret-hamilton.jpg",
-    "margaret-hamilton-cutout.webp",
-    "margaret-hamilton-silhouette.webp",
-    "radia-perlman.jpg",
-    "radia-perlman-cutout.webp",
-    "radia-perlman-silhouette.webp",
     "PMirunalini.jpeg",
     "ACMctFinal.mov",
     "ACMctFinal.mp4",
@@ -109,8 +100,8 @@ describe("Gated Asset Exclusion & Next.js Build-Artifact Protection", () => {
       }
     }
 
-    // Exactly 16 cleared assets must be present in public/
-    expect(allPublicFiles.length).toBe(16);
+    // Exactly 31 approved assets present in public/ (6 historical pioneers portraits, cutouts, silhouettes + 7 documents)
+    expect(allPublicFiles.length).toBe(31);
   });
 
   it("verifies Next.js production build output exists and contains zero gated assets", () => {

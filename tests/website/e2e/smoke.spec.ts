@@ -50,10 +50,11 @@ test.describe("The Thread We Carry & Terminal Fork Journey", () => {
     const spark = page.locator('[data-testid="travelling-golden-bead"]');
     await expect(spark).toBeAttached();
     await expect(page.locator('[data-testid="timeline-living-atmosphere"]')).toBeAttached();
+    await page.waitForTimeout(600);
 
     // Scroll down to mid-timeline
     await page.evaluate(() => window.scrollTo({ top: 3000, behavior: "instant" }));
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(600);
 
     // Progress should have updated
     const midProgress = await journeyPage.getAttribute("data-history-progress");
@@ -78,10 +79,11 @@ test.describe("The Thread We Carry & Terminal Fork Journey", () => {
     await page.goto("/");
     const journeyPage = page.locator('[data-testid="journey-page"]');
     await expect(journeyPage).toBeVisible();
+    await page.waitForTimeout(600);
 
     // Scroll to bottom and ensure fork progress is fully active
     await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
-    await page.waitForTimeout(600);
+    await page.waitForTimeout(800);
 
     const aboutBranch = page.locator('[data-testid="fork-branch-about"]').or(
       page.locator('[data-testid="mobile-fork-branch-about"]')

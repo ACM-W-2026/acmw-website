@@ -18,11 +18,7 @@ export const MosaicHomePage: React.FC<MosaicHomePageProps> = ({
 }) => {
   const router = useRouter();
   const [focusedRegion, setFocusedRegion] = useState<string | null>(null);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
-    typeof window !== "undefined"
-      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      : false
-  );
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   const handleTimeline = () => {
     if (onNavigateTimeline) onNavigateTimeline();
@@ -36,6 +32,7 @@ export const MosaicHomePage: React.FC<MosaicHomePageProps> = ({
 
   useEffect(() => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mq.matches);
     const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);

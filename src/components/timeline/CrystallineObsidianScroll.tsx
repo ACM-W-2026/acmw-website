@@ -159,7 +159,7 @@ export const CrystallineObsidianScroll = forwardRef<
     },
     ref
   ) => {
-    const [isOpen, setIsOpen] = useState(true);
+    const [isOpen, setIsOpen] = useState(prefersReducedMotion ? true : false);
     const containerRef = useRef<HTMLDivElement>(null);
     const sheetRef = useRef<HTMLDivElement>(null);
     const topRollerRef = useRef<HTMLDivElement>(null);
@@ -304,13 +304,13 @@ export const CrystallineObsidianScroll = forwardRef<
         );
       }
 
-      // 5. Closed tube ribbon reappears and contracts horizontally to center (0.34s -> 0.52s)
+      // 5. Closed tube ribbon contracts horizontally to center point and disappears (0.28s -> 0.48s)
       if (closedTube) {
-        tl.to(closedTube, { opacity: 1, duration: 0.10 }, 0.34);
-        tl.to(closedTube, { scaleX: 0.3, opacity: 0, duration: 0.16, ease: "power2.in" }, 0.38);
+        tl.to(closedTube, { opacity: 1, scaleX: 1, duration: 0.08 }, 0.28);
+        tl.to(closedTube, { scaleX: 0, opacity: 0, duration: 0.18, ease: "power2.in" }, 0.32);
       }
       if (topRoller && bottomRoller) {
-        tl.to([topRoller, bottomRoller], { scaleX: 0.3, opacity: 0, duration: 0.16, ease: "power2.in" }, 0.38);
+        tl.to([topRoller, bottomRoller], { scaleX: 0, opacity: 0, duration: 0.18, ease: "power2.in" }, 0.32);
       }
     };
 
@@ -370,11 +370,11 @@ export const CrystallineObsidianScroll = forwardRef<
       entranceTlRef.current = tl;
 
       // 1. CLOSED TUBE LATERAL EXPANSION:
-      // Spindles and closed tube start at center and spread horizontally from center outwards to full width (0.0s -> 0.22s)
+      // Spindles and closed tube start at center and spread horizontally from a point outwards to full width (0.0s -> 0.22s)
       if (closedTube) {
         tl.fromTo(
           closedTube,
-          { scaleX: 0.25, opacity: 0 },
+          { scaleX: 0, opacity: 0 },
           { scaleX: 1, opacity: 1, duration: 0.22, ease: "power2.out" },
           0
         );
@@ -577,8 +577,10 @@ export const CrystallineObsidianScroll = forwardRef<
     useEffect(() => {
       if (isActive && !hasEnteredRef.current) {
         playEntrance();
+      } else if (!prefersReducedMotion && !hasEnteredRef.current) {
+        resetStaged();
       }
-    }, [isActive]);
+    }, [isActive, prefersReducedMotion]);
 
     // Handle Physical Spindle Roll / Unroll Toggle via Signet Seal Medallion
     const handleToggle = () => {
