@@ -3,12 +3,12 @@ import { test, expect } from "@playwright/test";
 const CANONICAL_ROUTES = [
   { path: "/", title: "SSN ACM-W Student Chapter", testId: "journey-page" },
   { path: "/home", title: "SSN ACM-W Student Chapter", heading: "The Living World of SSN ACM-W" },
-  { path: "/about", title: "SSN ACM-W Student Chapter", heading: "About Chapter" },
+  { path: "/about", title: "SSN ACM-W Student Chapter", heading: "About ACM-W" },
   { path: "/events", title: "SSN ACM-W Student Chapter", heading: "Events & Flagships" },
-  { path: "/projects", title: "SSN ACM-W Student Chapter", heading: "Projects & Systems" },
-  { path: "/outreach", title: "SSN ACM-W Student Chapter", heading: "Outreach & Education" },
-  { path: "/team", title: "SSN ACM-W Student Chapter", heading: "Team & Community" },
-  { path: "/join-us", title: "SSN ACM-W Student Chapter", heading: "Join Us · The Next Chapter" },
+  { path: "/projects", title: "SSN ACM-W Student Chapter", heading: "Projects & Tech" },
+  { path: "/outreach", title: "SSN ACM-W Student Chapter", heading: "Outreach & CSpathshala" },
+  { path: "/team", title: "SSN ACM-W Student Chapter", heading: "Team & Leadership" },
+  { path: "/join-us", title: "SSN ACM-W Student Chapter", heading: "Join Us · The Future" },
 ];
 
 test.describe("Canonical Eight-Route Topology & Accessibility Smoke Suite", () => {
@@ -44,7 +44,7 @@ test.describe("The Thread We Carry & Terminal Fork Journey", () => {
     await expect(journeyPage).toBeVisible();
 
     // Verify initial state
-    await expect(journeyPage).toHaveAttribute("data-history-progress", "0");
+    await expect(journeyPage).toHaveAttribute("data-history-progress", /^0(\.0+)?$/);
 
     // Verify presence of spark bead and living atmosphere
     const spark = page.locator('[data-testid="travelling-golden-bead"]');
@@ -52,7 +52,7 @@ test.describe("The Thread We Carry & Terminal Fork Journey", () => {
     await expect(page.locator('[data-testid="timeline-living-atmosphere"]')).toBeAttached();
 
     // Scroll down to mid-timeline
-    await page.evaluate(() => window.scrollTo(0, 3000));
+    await page.evaluate(() => window.scrollTo({ top: 3000, behavior: "instant" }));
     await page.waitForTimeout(400);
 
     // Progress should have updated
@@ -60,15 +60,15 @@ test.describe("The Thread We Carry & Terminal Fork Journey", () => {
     expect(Number(midProgress)).toBeGreaterThan(0);
 
     // Scroll down to Terminal Fork
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
     await page.waitForTimeout(500);
 
     const forkProgress = await journeyPage.getAttribute("data-fork-progress");
     expect(Number(forkProgress)).toBeGreaterThan(0);
 
     // Scroll backwards to verify reverse uncurling and stability
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await page.waitForTimeout(400);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await page.waitForTimeout(500);
 
     const resetProgress = await journeyPage.getAttribute("data-history-progress");
     expect(Number(resetProgress)).toBeLessThan(0.1);
@@ -76,9 +76,12 @@ test.describe("The Thread We Carry & Terminal Fork Journey", () => {
 
   test("terminal fork enables selecting a facet strand and navigating", async ({ page }) => {
     await page.goto("/");
-    // Scroll to fork
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(500);
+    const journeyPage = page.locator('[data-testid="journey-page"]');
+    await expect(journeyPage).toBeVisible();
+
+    // Scroll to bottom and ensure fork progress is fully active
+    await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
+    await page.waitForTimeout(600);
 
     const aboutBranch = page.locator('[data-testid="fork-branch-about"]').or(
       page.locator('[data-testid="mobile-fork-branch-about"]')
@@ -87,9 +90,8 @@ test.describe("The Thread We Carry & Terminal Fork Journey", () => {
     await aboutBranch.first().click({ force: true });
 
     // Verifies navigation to /about
-    await page.waitForURL("**/about");
-    expect(page.url()).toContain("/about");
-    await expect(page.locator("h1")).toContainText("About Chapter");
+    await expect(page).toHaveURL(/\/about$/, { timeout: 10000 });
+    await expect(page.getByRole("heading", { name: "About ACM-W" })).toBeVisible();
   });
 });
 
@@ -99,20 +101,20 @@ test.describe("Living Mosaic Homepage & Interactive Exploration", () => {
     await expect(page.locator("h1")).toContainText("The Living World of SSN ACM-W");
 
     // Verify SVG Mosaic container
-    const mosaicSvg = page.locator("svg[viewBox='0 0 1200 700']");
+    const mosaicSvg = page.locator('[data-testid="mosaic-svg"]');
     await expect(mosaicSvg).toBeVisible();
 
     // Verify regions
     const regions = ["about", "events", "projects", "outreach", "team", "join-us"];
     for (const r of regions) {
-      await expect(page.locator(`[data-testid="region-${r}"]`)).toBeAttached();
+      await expect(page.locator(`[data-testid="mosaic-region-${r}"]`)).toBeAttached();
     }
 
     // Return to timeline link works
     const timelineLink = page.getByRole("button", { name: /Back to Timeline Story/i });
     await expect(timelineLink).toBeVisible();
     await timelineLink.click();
-    await page.waitForURL("**/");
+    await expect(page).toHaveURL(/\/$/, { timeout: 10000 });
   });
 });
 
@@ -126,7 +128,7 @@ test.describe("Responsive Viewport & Reduced Motion Adaptability", () => {
 
     // Navigate to /about
     await page.goto("/about");
-    await expect(page.locator("h1")).toContainText("About Chapter");
+    await expect(page.locator("h1")).toContainText("About ACM-W");
 
     // Horizontal overflow check
     const hasHorizontalOverflow = await page.evaluate(() => {

@@ -553,7 +553,7 @@ export const LivingFluidAtmosphere: React.FC<LivingFluidAtmosphereProps> = ({
       // 3. Collision, Soft Elastic Deformation & Coalescence (Merging)
       // Paused during active wheel/touch scroll bursts to guarantee pure 60fps main thread fluidity
       const isActivelyScrolling = performance.now() - lastScrollTime < 160;
-      let mergedIndices: number[] = [];
+      const mergedIndices: number[] = [];
 
       if (!isActivelyScrolling) {
         for (let i = 0; i < pockets.length; i++) {

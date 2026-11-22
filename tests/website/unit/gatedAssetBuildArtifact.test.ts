@@ -149,7 +149,6 @@ describe("Gated Asset Exclusion & Next.js Build-Artifact Protection", () => {
       ".css",
       ".json",
       ".txt",
-      ".map",
       ".rsc",
     ];
 

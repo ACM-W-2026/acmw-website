@@ -5,7 +5,6 @@ import { TerminalFork } from "@/components/fork/TerminalFork";
 import { ThreadTimeline } from "@/components/timeline/ThreadTimeline";
 import { MilestoneThematicSymbol } from "@/components/timeline/MilestoneThematicSymbols";
 import { LivingMosaic } from "@/components/mosaic/LivingMosaic";
-import { FacetPage } from "@/components/pages/FacetPage";
 
 describe("Component Rendering & Visual Hierarchy Suite", () => {
   it("renders MilestoneThematicSymbol with id, className, color, and style", () => {

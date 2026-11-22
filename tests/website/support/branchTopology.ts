@@ -7,7 +7,7 @@
  * INVARIANT: Branches diverge and stay independent. Shared exit stems or convergence funnels are strictly prohibited.
  */
 
-import { FacetId, FACET_DEFINITIONS } from "./facets";
+import { FacetId, FACET_DEFINITIONS } from "@/data/facets";
 
 export interface BranchTopology {
   id: FacetId;

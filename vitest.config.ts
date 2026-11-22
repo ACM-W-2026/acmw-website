@@ -9,7 +9,6 @@ export default defineConfig({
     include: ["tests/website/unit/**/*.test.{ts,tsx}"],
     exclude: [
       "**/node_modules/**",
-      "**/gatedAssetBuildArtifact.test.ts",
       "**/*.spec.ts",
     ],
   },
