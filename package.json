@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "npm run test:unit",
+    "test": "vitest run --exclude \"**/gatedAssetBuildArtifact.test.ts\" --exclude \"**/*.spec.ts\"",
     "test:unit": "vitest run --exclude \"**/gatedAssetBuildArtifact.test.ts\" --exclude \"**/*.spec.ts\"",
     "test:gated": "vitest run tests/website/unit/gatedAssetBuildArtifact.test.ts",
+    "test:hydration": "playwright test tests/website/e2e/hydration.spec.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

@@ -5,20 +5,30 @@ import gsap from "gsap";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
 import { useGSAP } from "@gsap/react";
 import { APPROVED_HISTORICAL_MILESTONES } from "../../data/historicalMilestones";
-import type {
-  JourneyProgressMapPoint,
-  JourneyProgressRegistry,
+import {
+  buildCameraDwellMap,
+  type JourneyProgressMapPoint,
+  type JourneyProgressRegistry,
 } from "../../state/journeyScroll";
-import { sampleTemporalParticles, sampleThreadBodySparkles } from "./temporalBeam";
-import type { TemporalParticle, ThreadBodySparkle } from "./temporalBeam";
+import { sampleTemporalParticles } from "./temporalBeam";
+import type { TemporalParticle } from "./temporalBeam";
 import { MilestoneThematicSymbol } from "./MilestoneThematicSymbols";
-import { CrystallineObsidianScroll, type CrystallineObsidianScrollHandle } from "./CrystallineObsidianScroll";
+import {
+  ObsidianExhibit,
+  type ObsidianExhibitHandle,
+} from "../exhibit/ObsidianExhibit";
+import {
+  LivingHelixOverlay,
+  type CenterlineSample,
+  type MilestoneColorStop,
+} from "./LivingHelixOverlay";
 
 gsap.registerPlugin(MotionPathPlugin);
 
 interface ThreadTimelineProps {
   onForkReached?: () => void;
   journeyProgressRef: React.MutableRefObject<JourneyProgressRegistry>;
+  historyProgressRef?: React.MutableRefObject<number>;
   onSkipToFork?: () => void;
   onSkipToHome?: () => void;
 }
@@ -32,6 +42,7 @@ interface MilestoneGeometry {
   entryX: number;
   entryY: number;
   connectorD: string;
+  innerConnectorD?: string;
   leftConnectorD?: string;
   frameTraceD: string;
   isLeft: boolean;
@@ -46,13 +57,17 @@ const EXHIBITION_FORMATION_LEAD_VIEWBOX_UNITS = 420;
 const RESPONSIVE_FORMATION_LEAD_VIEWBOX_UNITS = 420;
 const EXHIBITION_MIN_VIEWPORT_WIDTH = 1024;
 const EXHIBITION_MIN_VIEWPORT_HEIGHT = 600;
-// More native-scroll runway between each encounter gives the visitor time to
-// register the arrival instead of letting one ordinary wheel gesture skip it.
-const TIMELINE_STAGE_HEIGHT = 8000;
-const RESPONSIVE_TIMELINE_STAGE_HEIGHT = 7600;
-const DESKTOP_VIEWBOX_HEIGHT = 7843.1373;
-const RESPONSIVE_VIEWBOX_HEIGHT = 8235.3;
-const RESPONSIVE_MILESTONE_ANCHORS = [950, 2150, 3350, 4550, 5750, 6950];
+// Generous native-scroll runway includes temporary focus dwell windows at the
+// opening emblem birth and at each of the 6 pioneer stations before unpinning.
+const TRUNK_START_PROGRESS = 0.048;
+const TRUNK_PROGRESS_SPAN = 1 - TRUNK_START_PROGRESS;
+const WORLD_STAGE_HEIGHT = 11200;
+const RESPONSIVE_WORLD_STAGE_HEIGHT = 10400;
+const TIMELINE_STAGE_HEIGHT = 21600;
+const RESPONSIVE_TIMELINE_STAGE_HEIGHT = 16800;
+const DESKTOP_VIEWBOX_HEIGHT = 10980.3922;
+const RESPONSIVE_VIEWBOX_HEIGHT = 11269.6;
+const RESPONSIVE_MILESTONE_ANCHORS = [1250, 2900, 4550, 6200, 7850, 9500];
 const TIMELINE_SVG_SCALE = 1.02;
 
 function getPathProgressAtY(
@@ -144,75 +159,75 @@ function getAdaptiveFormationLeadUnits(
 
 const MILESTONE_GEOMETRIES: Record<string, MilestoneGeometry> = {
   "PION-01": {
-    anchorY: 846,
+    anchorY: 1160,
     cardX: 40,
-    cardY: 666,
+    cardY: 980,
     cardWidth: 400,
     cardHeight: 360,
     entryX: 440,
-    entryY: 846,
-    connectorD: "M 500 846 C 480 846, 460 846, 440 846",
-    frameTraceD: getLeftCardPerimeterPath(40, 666, 400, 360, 846),
+    entryY: 1160,
+    connectorD: "M 500 1160 C 480 1160, 460 1160, 440 1160",
+    frameTraceD: getLeftCardPerimeterPath(40, 980, 400, 360, 1160),
     isLeft: true,
   },
   "PION-02": {
-    anchorY: 1946,
+    anchorY: 2640,
     cardX: 560,
-    cardY: 1766,
+    cardY: 2460,
     cardWidth: 400,
     cardHeight: 360,
     entryX: 560,
-    entryY: 1946,
-    connectorD: "M 500 1946 C 520 1946, 540 1946, 560 1946",
-    frameTraceD: getRightCardPerimeterPath(560, 1766, 400, 360, 1946),
+    entryY: 2640,
+    connectorD: "M 500 2640 C 520 2640, 540 2640, 560 2640",
+    frameTraceD: getRightCardPerimeterPath(560, 2460, 400, 360, 2640),
     isLeft: false,
   },
   "PION-03": {
-    anchorY: 3046,
+    anchorY: 4200,
     cardX: 40,
-    cardY: 2866,
+    cardY: 4020,
     cardWidth: 400,
     cardHeight: 360,
     entryX: 440,
-    entryY: 3046,
-    connectorD: "M 500 3046 C 480 3046, 460 3046, 440 3046",
-    frameTraceD: getLeftCardPerimeterPath(40, 2866, 400, 360, 3046),
+    entryY: 4200,
+    connectorD: "M 500 4200 C 480 4200, 460 4200, 440 4200",
+    frameTraceD: getLeftCardPerimeterPath(40, 4020, 400, 360, 4200),
     isLeft: true,
   },
   "PION-04": {
-    anchorY: 4146,
+    anchorY: 5760,
     cardX: 560,
-    cardY: 3966,
+    cardY: 5580,
     cardWidth: 400,
     cardHeight: 360,
     entryX: 560,
-    entryY: 4146,
-    connectorD: "M 500 4146 C 520 4146, 540 4146, 560 4146",
-    frameTraceD: getRightCardPerimeterPath(560, 3966, 400, 360, 4146),
+    entryY: 5760,
+    connectorD: "M 500 5760 C 520 5760, 540 5760, 560 5760",
+    frameTraceD: getRightCardPerimeterPath(560, 5580, 400, 360, 5760),
     isLeft: false,
   },
   "PION-05": {
-    anchorY: 5246,
+    anchorY: 7320,
     cardX: 40,
-    cardY: 5066,
+    cardY: 7140,
     cardWidth: 400,
     cardHeight: 360,
     entryX: 440,
-    entryY: 5246,
-    connectorD: "M 500 5246 C 480 5246, 460 5246, 440 5246",
-    frameTraceD: getLeftCardPerimeterPath(40, 5066, 400, 360, 5246),
+    entryY: 7320,
+    connectorD: "M 500 7320 C 480 7320, 460 7320, 440 7320",
+    frameTraceD: getLeftCardPerimeterPath(40, 7140, 400, 360, 7320),
     isLeft: true,
   },
   "PION-06": {
-    anchorY: 6346,
+    anchorY: 8880,
     cardX: 560,
-    cardY: 6166,
+    cardY: 8700,
     cardWidth: 400,
     cardHeight: 360,
     entryX: 560,
-    entryY: 6346,
-    connectorD: "M 500 6346 C 520 6346, 540 6346, 560 6346",
-    frameTraceD: getRightCardPerimeterPath(560, 6166, 400, 360, 6346),
+    entryY: 8880,
+    connectorD: "M 500 8880 C 520 8880, 540 8880, 560 8880",
+    frameTraceD: getRightCardPerimeterPath(560, 8700, 400, 360, 8880),
     isLeft: false,
   },
 };
@@ -221,7 +236,23 @@ interface TimelinePathMetrics {
   pathLength: number;
   anchorProgresses: Record<string, number>;
   particles: TemporalParticle[];
-  sparkles: ThreadBodySparkle[];
+  centerlineSamples: CenterlineSample[];
+  anchorYs: number[];
+}
+
+function sampleCenterline(
+  path: SVGPathElement,
+  totalLength: number,
+  steps = 200
+): CenterlineSample[] {
+  if (totalLength <= 0) return [];
+  const samples: CenterlineSample[] = [];
+  for (let i = 0; i <= steps; i += 1) {
+    const progress = i / steps;
+    const pt = path.getPointAtLength(progress * totalLength);
+    samples.push({ progress, x: pt.x, y: pt.y });
+  }
+  return samples;
 }
 
 const PARTICLE_COLORS = [
@@ -240,8 +271,8 @@ function getExhibitionGeometry(
   _anchorProgress: number,
   _formationLeadUnits: number
 ): MilestoneGeometry {
-  const panelWidthCss = Math.min(940, Math.max(840, viewportWidth * 0.72));
-  const panelHeightCss = Math.min(500, Math.max(420, viewportWidth * 0.32));
+  const panelWidthCss = Math.min(1260, Math.max(960, viewportWidth * 0.90));
+  const panelHeightCss = Math.min(540, Math.max(440, viewportWidth * 0.36));
   const cardWidth = panelWidthCss / TIMELINE_SVG_SCALE;
   const cardHeight = panelHeightCss / TIMELINE_SVG_SCALE;
 
@@ -253,15 +284,18 @@ function getExhibitionGeometry(
   const entryY = base.anchorY; // STRICTLY HORIZONTAL BRANCHING (zero V-sag)
   const approachOffset = 0;
 
-  // 35% Left Wing (Pioneer Cutout), 30% Corridor (Thread at 500), 35% Right Wing (Crystalline Codex Scroll)
-  const cutoutRightX = cardX + cardWidth * 0.35;
-  const typoX = cardX + cardWidth * 0.65;
+  // 38% Left Wing (Cutout), 21% Clear Corridor (Thread at 50% / X=500), 41% Right Wing (Card starts strictly at 59% / ~100px clear of thread)
+  const cutoutTargetX = cardX + cardWidth * 0.28;
+  const typoX = cardX + cardWidth * 0.59;
   const typoWidth = cardX + cardWidth - typoX;
-  const entryX = typoX;
+  // Terminate right connector gracefully inside the Right Wing exhibit cavity so closed artifacts connect seamlessly
+  const entryX = typoX + Math.round(typoWidth * 0.28);
 
-  // Pure horizontal bilateral branching lines (<-- o -->) strictly at anchorY
-  const connectorD = `M 500 ${anchorY} L ${entryX} ${anchorY}`;
-  const leftConnectorD = `M 500 ${anchorY} L ${cutoutRightX} ${anchorY}`;
+  // Terminate outer curved branch cleanly at left card dock edge (typoX, anchorY); innerConnector
+  // bridges to closed artifact center and smoothly erases back to typoX during card transformation.
+  const connectorD = `M 500 ${anchorY - 36} C 500 ${anchorY - 6}, ${Math.round(500 + (typoX - 500) * 0.45)} ${anchorY + 12}, ${typoX} ${anchorY}`;
+  const innerConnectorD = `M ${typoX} ${anchorY} L ${entryX} ${anchorY}`;
+  const leftConnectorD = `M 500 ${anchorY - 36} C 500 ${anchorY - 6}, 476 ${anchorY + 14}, ${cutoutTargetX} ${anchorY}`;
   const frameTraceD = getRightCardPerimeterPath(typoX, cardY, typoWidth, cardHeight, entryY);
   return {
     ...base,
@@ -273,6 +307,7 @@ function getExhibitionGeometry(
     entryX,
     entryY,
     connectorD,
+    innerConnectorD,
     leftConnectorD,
     frameTraceD,
     isLeft: true,
@@ -326,10 +361,15 @@ const LIGHT_ORBIT_PARTICLES: OrbitParticle[] = [
 export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
   onForkReached,
   journeyProgressRef,
+  historyProgressRef,
   onSkipToFork,
   onSkipToHome,
 }) => {
+  const localHistoryProgressRef = useRef(0);
+  const effectiveHistoryProgressRef = historyProgressRef ?? localHistoryProgressRef;
   const containerRef = useRef<HTMLDivElement>(null);
+  const worldLayerRef = useRef<HTMLDivElement>(null);
+  const cameraWorldOffsetRef = useRef(0);
   const pathRef = useRef<SVGPathElement>(null);
   const beamEnvelopeRef = useRef<SVGPathElement>(null);
   const beamBodyRef = useRef<SVGPathElement>(null);
@@ -347,13 +387,16 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
   const strobeStopEndRef = useRef<SVGStopElement>(null);
   const strobeRippleRef = useRef<SVGPathElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const heroIntroRef = useRef<HTMLDivElement>(null);
   const promptRef = useRef<HTMLDivElement>(null);
   const progressTimelineRef = useRef<gsap.core.Timeline | null>(null);
 
   // Element refs for phased cinematic card formation
   const anchorRefs = useRef<Record<string, SVGGElement | null>>({});
   const connectorRefs = useRef<Record<string, SVGPathElement | null>>({});
+  const innerConnectorRefs = useRef<Record<string, SVGPathElement | null>>({});
   const leftConnectorRefs = useRef<Record<string, SVGPathElement | null>>({});
+  const exhibitProgressRef = useRef<Record<string, number>>({});
   const milestoneRefs = useRef<Record<string, HTMLElement | null>>({});
   const mobileMilestoneRefs = useRef<Record<string, HTMLElement | null>>({});
   const frameTraceRefs = useRef<Record<string, SVGPathElement | null>>({});
@@ -362,9 +405,24 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
   const portraitRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const contentRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const identityRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const scrollRefs = useRef<Record<string, CrystallineObsidianScrollHandle | null>>({});
+  const scrollRefs = useRef<Record<string, ObsidianExhibitHandle | null>>({});
+  const stationActivatedRef = useRef<Record<string, boolean>>({});
+  const revealedStationsRef = useRef<Record<string, boolean>>({});
 
-  const handleScrollToggle = (milestoneId: string, isOpen: boolean) => {
+  const handleExhibitProgress = (mId: string, prog: number) => {
+    exhibitProgressRef.current[mId] = prog;
+    const inner = innerConnectorRefs.current[mId];
+    if (!inner || !revealedStationsRef.current[mId] || prefersReducedMotion) return;
+    // Erase the inner stub from artifact tip back to the card dock (prog: 0.04 -> 0.24)
+    const eraseFrac = Math.min(1, Math.max(0, (prog - 0.04) / 0.20));
+    const len = inner.getTotalLength() || 120;
+    if (prog > 0.04) gsap.killTweensOf(inner);
+    inner.style.strokeDasharray = `${len}`;
+    inner.style.strokeDashoffset = `${len * eraseFrac}`;
+    inner.style.opacity = `${(0.98 * (1 - eraseFrac)).toFixed(3)}`;
+  };
+
+  const _handleScrollToggle = (milestoneId: string, isOpen: boolean) => {
     const frame = frameTraceRefs.current[milestoneId];
     if (frame) {
       gsap.to(frame, {
@@ -383,6 +441,11 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
   const [pathMetrics, setPathMetrics] = useState<TimelinePathMetrics | null>(null);
 
   useEffect(() => {
+    // 0. Disable automatic browser scroll restoration to prevent FOUC on reload
+    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
     // 1. Immediately sync actual client viewport dimensions after hydration
     setViewportSize({ width: window.innerWidth, height: window.innerHeight });
 
@@ -419,25 +482,25 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
   // exact horizontal center of the viewport stage, and the encounters jut out
   // on alternating sides with balanced, readable archival plaques.
   const responsiveParentPathD = `
-    M ${centerRailX} 40
-    C ${centerRailX - 10} 260, ${centerRailX + 10} 560, ${centerRailX} 950
-    C ${centerRailX + 14} 1250, ${centerRailX - 14} 1780, ${centerRailX} 2150
-    C ${centerRailX + 14} 2450, ${centerRailX - 14} 3000, ${centerRailX} 3350
-    C ${centerRailX + 14} 3650, ${centerRailX - 14} 4200, ${centerRailX} 4550
-    C ${centerRailX + 14} 4850, ${centerRailX - 14} 5400, ${centerRailX} 5750
-    C ${centerRailX + 14} 6050, ${centerRailX - 10} 6600, ${centerRailX} 6950
-    C ${centerRailX + 12} 7300, ${centerRailX} 7850, ${centerRailX} ${RESPONSIVE_VIEWBOX_HEIGHT}
+    M ${centerRailX} 350
+    C ${centerRailX - 24} 580, ${centerRailX + 26} 900, ${centerRailX} 1250
+    C ${centerRailX + 28} 1680, ${centerRailX - 28} 2400, ${centerRailX} 2900
+    C ${centerRailX + 28} 3360, ${centerRailX - 28} 4050, ${centerRailX} 4550
+    C ${centerRailX + 28} 5010, ${centerRailX - 28} 5700, ${centerRailX} 6200
+    C ${centerRailX + 28} 6660, ${centerRailX - 28} 7350, ${centerRailX} 7850
+    C ${centerRailX + 28} 8310, ${centerRailX - 26} 9000, ${centerRailX} 9500
+    C ${centerRailX + 22} 10050, ${centerRailX} 10750, ${centerRailX} ${RESPONSIVE_VIEWBOX_HEIGHT}
   `.replace(/\s+/g, " ").trim();
 
   const desktopParentPathD = `
-    M 500 40
-    C 500 240, 470 540, 500 846
-    C 530 1120, 470 1650, 500 1946
-    C 530 2220, 470 2750, 500 3046
-    C 530 3320, 470 3850, 500 4146
-    C 530 4420, 470 4950, 500 5246
-    C 530 5520, 500 6050, 500 6346
-    C 500 6750, 500 7450, 500 ${DESKTOP_VIEWBOX_HEIGHT}
+    M 500 350
+    C 500 600, 434 860, 500 1160
+    C 566 1540, 434 2240, 500 2640
+    C 566 3020, 434 3800, 500 4200
+    C 566 4580, 434 5360, 500 5760
+    C 566 6140, 434 6920, 500 7320
+    C 566 7700, 440 8480, 500 8880
+    C 550 9500, 478 10300, 500 ${DESKTOP_VIEWBOX_HEIGHT}
   `.replace(/\s+/g, " ").trim();
   const parentPathD = isResponsiveComposition ? responsiveParentPathD : desktopParentPathD;
 
@@ -451,7 +514,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         viewportSize.height,
         exhibitionPanelHeightCss,
         pathMetrics.pathLength,
-        TIMELINE_STAGE_HEIGHT
+        WORLD_STAGE_HEIGHT
       )
     : EXHIBITION_FORMATION_LEAD_VIEWBOX_UNITS;
   const responsiveFormationLeadUnits = pathMetrics
@@ -459,83 +522,69 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         viewportSize.height,
         responsivePanelHeightCss,
         pathMetrics.pathLength,
-        RESPONSIVE_TIMELINE_STAGE_HEIGHT
+        RESPONSIVE_WORLD_STAGE_HEIGHT
       )
     : RESPONSIVE_FORMATION_LEAD_VIEWBOX_UNITS;
 
-  // Responsive and Exhibition exhibits are positioned at a consistent, readable viewport
-  // band when the travelling light reaches their station. The document remains
-  // the native scroll authority; this piecewise map only changes how story
-  // progress is distributed across that existing native range.
+  // Map native document scroll smoothly into camera world Y + timeline progress,
+  // giving the opening SSN ACM-W birth and all 6 pioneer encounters temporary dwell
+  // windows while keeping trunk, branches, cutouts, and cards locked as one unit.
   const historyProgressMap = useMemo<JourneyProgressMapPoint[] | null>(() => {
     if (!pathMetrics || pathMetrics.pathLength <= 0) {
       return null;
     }
     if (isResponsiveComposition) {
-      const scrollRange = Math.max(
+      const worldScrollRange = Math.max(
         1,
-        RESPONSIVE_TIMELINE_STAGE_HEIGHT - viewportSize.height
+        RESPONSIVE_WORLD_STAGE_HEIGHT - viewportSize.height
       );
       const stageScale =
-        RESPONSIVE_TIMELINE_STAGE_HEIGHT / RESPONSIVE_VIEWBOX_HEIGHT;
+        RESPONSIVE_WORLD_STAGE_HEIGHT / RESPONSIVE_VIEWBOX_HEIGHT;
       const panelHeight = responsivePanelHeightCss;
       const halfPanel = panelHeight / 2;
       const formationWindowPx =
-        (responsiveFormationLeadUnits / pathMetrics.pathLength) * scrollRange;
-      const minCenter = halfPanel + scrollRange * 0.01 + 2;
+        (responsiveFormationLeadUnits / pathMetrics.pathLength) * worldScrollRange;
+      const minCenter = halfPanel + worldScrollRange * 0.01 + 2;
       const maxCenter = viewportSize.height - halfPanel - formationWindowPx - 2;
       const targetCenter = Math.min(
         maxCenter,
-        Math.max(minCenter, viewportSize.height * 0.32)
+        Math.max(minCenter, viewportSize.height * 0.34)
       );
 
-      return [
-        { nativeProgress: 0, timelineProgress: 0 },
-        ...APPROVED_HISTORICAL_MILESTONES.map((milestone, index) => {
-          const anchorY = RESPONSIVE_MILESTONE_ANCHORS[index];
-          const nativeScrollAtArrival = anchorY * stageScale - targetCenter;
-          return {
-            nativeProgress: Math.max(
-              0,
-              Math.min(1, nativeScrollAtArrival / scrollRange)
-            ),
-            timelineProgress: pathMetrics.anchorProgresses[milestone.id] ?? 0,
-          };
-        }),
-        { nativeProgress: 1, timelineProgress: 1 },
-      ];
+      return buildCameraDwellMap({
+        worldScrollRangePx: worldScrollRange,
+        targetCenterPx: targetCenter,
+        trunkStartProgress: TRUNK_START_PROGRESS,
+        openingDwellFraction: 0.032,
+        stationDwellFraction: 0.046,
+        stationDriftPx: 148,
+        stations: APPROVED_HISTORICAL_MILESTONES.map((milestone, index) => ({
+          anchorWorldPx: RESPONSIVE_MILESTONE_ANCHORS[index] * stageScale,
+          anchorTimelineProgress: pathMetrics.anchorProgresses[milestone.id] ?? 0,
+        })),
+      });
     }
 
-    if (isExhibitionViewport) {
-      const scrollRange = Math.max(
-        1,
-        TIMELINE_STAGE_HEIGHT - viewportSize.height
-      );
-      const stageScale = TIMELINE_SVG_SCALE;
-      const targetCenter = Math.round(viewportSize.height * 0.44);
+    const worldScrollRange = Math.max(1, WORLD_STAGE_HEIGHT - viewportSize.height);
+    const targetCenter = Math.round(viewportSize.height * 0.44);
 
-      return [
-        { nativeProgress: 0, timelineProgress: 0 },
-        ...APPROVED_HISTORICAL_MILESTONES.map((milestone) => {
-          const base = MILESTONE_GEOMETRIES[milestone.id];
-          const anchorY = base?.anchorY ?? 0;
-          const nativeScrollAtArrival = anchorY * stageScale - targetCenter;
-          return {
-            nativeProgress: Math.max(
-              0,
-              Math.min(1, nativeScrollAtArrival / scrollRange)
-            ),
-            timelineProgress: pathMetrics.anchorProgresses[milestone.id] ?? 0,
-          };
-        }),
-        { nativeProgress: 1, timelineProgress: 1 },
-      ];
-    }
-
-    return null;
+    return buildCameraDwellMap({
+      worldScrollRangePx: worldScrollRange,
+      targetCenterPx: targetCenter,
+      trunkStartProgress: TRUNK_START_PROGRESS,
+      openingDwellFraction: 0.028,
+      stationDwellFraction: 0.056,
+      stationDriftPx: 184,
+      stations: APPROVED_HISTORICAL_MILESTONES.map((milestone) => {
+        const base = MILESTONE_GEOMETRIES[milestone.id];
+        return {
+          anchorWorldPx: (base?.anchorY ?? 0) * TIMELINE_SVG_SCALE,
+          anchorTimelineProgress: pathMetrics.anchorProgresses[milestone.id] ?? 0,
+        };
+      }),
+    });
   }, [
     isResponsiveComposition,
-    isExhibitionViewport,
     pathMetrics,
     responsivePanelHeightCss,
     responsiveFormationLeadUnits,
@@ -637,15 +686,17 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
     if (!path) return;
     const pathLength = path.getTotalLength();
     const anchorProgresses: Record<string, number> = {};
+    const anchorYs: number[] = [];
     APPROVED_HISTORICAL_MILESTONES.forEach((milestone) => {
       const geometry = milestoneGeometries[milestone.id];
       if (geometry) {
         anchorProgresses[milestone.id] = getPathProgressAtY(path, geometry.anchorY, pathLength);
+        anchorYs.push(geometry.anchorY);
       }
     });
     const particles = sampleTemporalParticles(path, 24, pathLength);
-    const sparkles = sampleThreadBodySparkles(path, 36, pathLength);
-    setPathMetrics({ pathLength, anchorProgresses, particles, sparkles });
+    const centerlineSamples = sampleCenterline(path, pathLength, 200);
+    setPathMetrics({ pathLength, anchorProgresses, particles, centerlineSamples, anchorYs });
   }, [parentPathD, viewportSize.width]);
 
   useEffect(() => {
@@ -656,14 +707,34 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  // Preload historical milestone portraits eagerly into browser cache for zero scroll latency
+  // Preload only the first visible pioneer cutout (.webp) so initial hydration avoids 6MB+ JPEG contention
   useEffect(() => {
-    APPROVED_HISTORICAL_MILESTONES.forEach((m) => {
-      if (m.portraitUrl && typeof window !== "undefined") {
-        const img = new Image();
-        img.src = m.portraitUrl;
-      }
+    const first = APPROVED_HISTORICAL_MILESTONES[0];
+    const url = first?.cutoutUrl || first?.silhouetteUrl;
+    if (url && typeof window !== "undefined") {
+      const img = new Image();
+      img.src = url;
+    }
+  }, []);
+
+  // One-time deep-space void opening: wait briefly in starlight before fading in hero copy
+  useEffect(() => {
+    const heroIntro = heroIntroRef.current;
+    if (!heroIntro) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      gsap.set(heroIntro, { opacity: 1, y: 0 });
+      return;
+    }
+    const tween = gsap.to(heroIntro, {
+      opacity: 1,
+      y: 0,
+      duration: 1.0,
+      delay: 0.85,
+      ease: "power2.out",
     });
+    return () => {
+      tween.kill();
+    };
   }, []);
 
   useGSAP(
@@ -681,6 +752,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
       const beadParticleCluster = beadParticleClusterRef.current;
       const container = containerRef.current;
       const header = headerRef.current;
+      const heroIntro = heroIntroRef.current;
       const prompt = promptRef.current;
       progressTimelineRef.current = null;
       if (!path || !container) return;
@@ -706,7 +778,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         if (beamFibreLeft) gsap.set(beamFibreLeft, { opacity: 0.54 });
         if (beamFibreRight) gsap.set(beamFibreRight, { opacity: 0.42 });
         if (flowRays) gsap.set(flowRays, { strokeDashoffset: 0, opacity: 0.18 });
-        if (sourceAmbient) gsap.set(sourceAmbient, { cx: threadX, cy: 40, opacity: 0.58 });
+        if (sourceAmbient) gsap.set(sourceAmbient, { cx: threadX, cy: 350, opacity: 0.58 });
         particles.forEach((particle) => {
           const node = particleRefs.current[particle.id];
           if (node) gsap.set(node, { opacity: particle.opacity });
@@ -714,23 +786,26 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         // Reduced motion preserves the opening origin spark; it must not teleport
         // the light to the terminal endpoint. The complete static path/content
         // remains available without requiring scroll-driven movement.
-        if (bead) gsap.set(bead, { cx: threadX, cy: 40, opacity: 1, scale: 1, stroke: "#1595D0" });
-        if (beadGlow) gsap.set(beadGlow, { cx: threadX, cy: 40, opacity: 0.8, scale: 1, fill: "rgba(21, 149, 208, 0.45)" });
+        if (bead) gsap.set(bead, { cx: threadX, cy: 350, opacity: 1, scale: 1, stroke: "#1595D0" });
+        if (beadGlow) gsap.set(beadGlow, { cx: threadX, cy: 350, opacity: 0.8, scale: 1, fill: "rgba(21, 149, 208, 0.45)" });
         if (beadParticleCluster) gsap.set(beadParticleCluster, { opacity: 0.7 });
         const staticStrobeStops = [strobeStopStartRef.current, strobeStopEndRef.current].filter(Boolean);
         if (staticStrobeStops.length > 0) gsap.set(staticStrobeStops, { stopColor: "#1595D0" });
         if (strobeStopCoreRef.current) gsap.set(strobeStopCoreRef.current, { stopColor: "#F5F8FA" });
         if (strobeRippleRef.current) gsap.set(strobeRippleRef.current, { stroke: "#F5F8FA" });
         if (header) gsap.set(header, { opacity: 1, y: 0 });
+        if (heroIntro) gsap.set(heroIntro, { opacity: 1, y: 0 });
         APPROVED_HISTORICAL_MILESTONES.forEach((m) => {
           const anchor = anchorRefs.current[m.id];
           if (anchor) gsap.set(anchor, { autoAlpha: 1, scale: 1 });
           const connector = connectorRefs.current[m.id];
           if (connector) gsap.set(connector, { strokeDashoffset: 0, autoAlpha: 1 });
+          const innerConnector = innerConnectorRefs.current[m.id];
+          if (innerConnector) gsap.set(innerConnector, { strokeDashoffset: 0, autoAlpha: 0 });
           const leftConnector = leftConnectorRefs.current[m.id];
           if (leftConnector) gsap.set(leftConnector, { strokeDashoffset: 0, autoAlpha: 1 });
           const card = milestoneRefs.current[m.id];
-          if (card) gsap.set(card, { autoAlpha: 1, y: 0, clipPath: "inset(0% 0% 0% 0%)" });
+          if (card) gsap.set(card, { autoAlpha: 1, y: 0, clipPath: isExhibitionViewport ? "none" : "inset(0% 0% 0% 0%)" });
           const mobileCard = mobileMilestoneRefs.current[m.id];
           if (mobileCard) gsap.set(mobileCard, { autoAlpha: 1, y: 0, clipPath: "inset(0% 0% 0% 0%)" });
           const frame = frameTraceRefs.current[m.id];
@@ -769,43 +844,48 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         if (node) gsap.set(node, { opacity: 0 });
       });
 
-      // The origin spark is visible from the first painted frame. Only the
-      // editorial sentence and scroll affordance have a page-load entrance.
-      if (bead) gsap.set(bead, { opacity: 1, scale: 1 });
-      if (beadGlow) gsap.set(beadGlow, { opacity: 0.85, scale: 1 });
-      if (beadParticleCluster) gsap.set(beadParticleCluster, { opacity: 1 });
-      // Opening copy is visible in the resting frame. Its only animated owner
-      // is the reversible journey timeline below; there is no competing load tween.
-      if (header) gsap.set(header, { opacity: 1, y: 0 });
-      if (prompt) gsap.set(prompt, { opacity: 0.8 });
+      // Start travelling spark hidden in pure deep-space void until star convergence forms SSN ACM-W logo
+      if (bead) gsap.set(bead, { opacity: 0, scale: 0.7 });
+      if (beadGlow) gsap.set(beadGlow, { opacity: 0, scale: 0.7 });
+      if (beadParticleCluster) gsap.set(beadParticleCluster, { opacity: 0 });
 
-      // Hide all future station markers and cards at baseline
+      // Scroll dims headerRef cleanly without fighting the standalone mount fade-in
+      if (header) gsap.set(header, { opacity: 1, y: 0 });
+      if (prompt) gsap.set(prompt, { opacity: 0.85 });
+
+      // Hide only unrevealed station elements at initial baseline; once revealed forward they stay loaded
       APPROVED_HISTORICAL_MILESTONES.forEach((m) => {
+        if (revealedStationsRef.current[m.id]) return;
+
         const anchor = anchorRefs.current[m.id];
         if (anchor) gsap.set(anchor, { autoAlpha: 0, scale: 0.35, transformOrigin: "center center" });
 
         const connector = connectorRefs.current[m.id];
         if (connector) {
-          const len = connector.getTotalLength() || 140;
-          gsap.set(connector, { strokeDasharray: len, strokeDashoffset: len });
+          const len = connector.getTotalLength() || 400;
+          gsap.set(connector, { strokeDasharray: len, strokeDashoffset: len, autoAlpha: 0 });
+        }
+        const innerConnector = innerConnectorRefs.current[m.id];
+        if (innerConnector) {
+          const len = innerConnector.getTotalLength() || 120;
+          gsap.set(innerConnector, { strokeDasharray: len, strokeDashoffset: len, autoAlpha: 0 });
         }
         const leftConnector = leftConnectorRefs.current[m.id];
         if (leftConnector) {
-          const len = leftConnector.getTotalLength() || 140;
+          const len = leftConnector.getTotalLength() || 400;
           gsap.set(leftConnector, { strokeDasharray: len, strokeDashoffset: len, autoAlpha: 0 });
         }
 
         const card = milestoneRefs.current[m.id];
         if (card) {
           const geo = milestoneGeometries[m.id];
-          const approachOffset = geo?.approachOffset || 0;
           const openingClip = isExhibitionViewport
             ? "none"
             : getContactEdgeClip(geo?.isLeft ?? false);
           gsap.set(card, {
             autoAlpha: 0,
             clipPath: openingClip,
-            y: isExhibitionViewport ? -approachOffset : 0,
+            y: 0,
           });
         }
         const mobileCard = mobileMilestoneRefs.current[m.id];
@@ -820,19 +900,19 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         const frame = frameTraceRefs.current[m.id];
         if (frame) {
           const len = frame.getTotalLength() || 1520;
-          gsap.set(frame, { strokeDasharray: len, strokeDashoffset: len, strokeOpacity: 0.22 });
+          gsap.set(frame, { strokeDasharray: len, strokeDashoffset: len, strokeOpacity: 0, opacity: 0 });
         }
         const responsiveFrame = responsiveFrameTraceRefs.current[m.id];
         if (responsiveFrame) {
           const len = responsiveFrame.getTotalLength() || 1520;
-          gsap.set(responsiveFrame, { strokeDasharray: len, strokeDashoffset: len, strokeOpacity: 0.22 });
+          gsap.set(responsiveFrame, { strokeDasharray: len, strokeDashoffset: len, strokeOpacity: 0, opacity: 0 });
         }
 
         const surface = cardSurfaceRefs.current[m.id];
         if (surface) gsap.set(surface, { opacity: 0 });
 
         const portrait = portraitRefs.current[m.id];
-        if (portrait) gsap.set(portrait, { autoAlpha: 0, scale: 0.92, y: 14 });
+        if (portrait) gsap.set(portrait, { autoAlpha: 0, scale: 0.94, y: 12 });
 
         const identity = identityRefs.current[m.id];
         if (identity) gsap.set(identity, { autoAlpha: 1, y: 0 });
@@ -845,47 +925,60 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
       // -----------------------------------------------------------------------
       const tl = gsap.timeline({ paused: true });
 
-      // 1. Fade opening text as scroll starts (0.00 -> 0.07)
+      // 1. Fade opening text cleanly right as scroll starts (0.00 -> 0.014) so it clears before emblem converges
       if (header) {
         tl.to(
           header,
           {
             opacity: 0,
-            y: -24,
-            duration: 0.07,
-            ease: "none",
+            y: -32,
+            duration: 0.014,
+            ease: "power1.out",
           },
           0
         );
       }
       if (prompt) {
-        tl.to(prompt, { opacity: 0, duration: 0.04, ease: "none" }, 0);
+        tl.to(prompt, { opacity: 0, duration: 0.01, ease: "none" }, 0);
       }
 
-      // 3. Reveal every parent-beam layer and the ray mask from the same path progress.
+      // 2. Ignite origin spark cleanly at bottom apex of star-forged SSN ACM-W logo (0.036 -> TRUNK_START_PROGRESS)
+      if (bead) {
+        tl.to(bead, { opacity: 1, scale: 1, duration: 0.012, ease: "power2.out" }, 0.036);
+      }
+      if (beadGlow) {
+        tl.to(beadGlow, { opacity: 0.85, scale: 1, duration: 0.012, ease: "power2.out" }, 0.036);
+      }
+      if (beadParticleCluster) {
+        tl.to(beadParticleCluster, { opacity: 1, duration: 0.012, ease: "power2.out" }, 0.036);
+      }
+
+      // 3. Grow parent-beam layers & travelling bead ONLY AFTER logo convergence completes
       progressiveBeamPaths.forEach((layer) => {
         tl.to(
           layer,
-          { strokeDashoffset: 0, duration: 1, ease: "none" },
-          0
+          { strokeDashoffset: 0, duration: TRUNK_PROGRESS_SPAN, ease: "none" },
+          TRUNK_START_PROGRESS
         );
       });
       if (flowRays) {
-        // The ray pattern moves forward while the shared mask keeps it strictly
-        // inside the already-revealed section of the parent path.
-        tl.to(flowRays, { strokeDashoffset: -1040, opacity: 0.22, duration: 1, ease: "none" }, 0);
+        tl.to(
+          flowRays,
+          { strokeDashoffset: -1040, opacity: 0.22, duration: TRUNK_PROGRESS_SPAN, ease: "none" },
+          TRUNK_START_PROGRESS
+        );
       }
       if (sourceAmbient) {
         tl.to(
           sourceAmbient,
           {
             motionPath: { path, align: path, alignOrigin: [0.5, 0.5] },
-            duration: 1,
+            duration: TRUNK_PROGRESS_SPAN,
             ease: "none",
           },
-          0
+          TRUNK_START_PROGRESS
         );
-        tl.to(sourceAmbient, { opacity: 0.66, duration: 0.1, ease: "none" }, 0.025);
+        tl.to(sourceAmbient, { opacity: 0.66, duration: 0.06, ease: "none" }, TRUNK_START_PROGRESS + 0.01);
       }
       particles.forEach((particle) => {
         const node = particleRefs.current[particle.id];
@@ -893,7 +986,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
         tl.to(
           node,
           { opacity: particle.opacity, duration: 0.012, ease: "power1.out" },
-          particle.progress
+          TRUNK_START_PROGRESS + particle.progress * TRUNK_PROGRESS_SPAN
         );
       });
 
@@ -907,10 +1000,10 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
               align: path,
               alignOrigin: [0.5, 0.5],
             },
-            duration: 1,
+            duration: TRUNK_PROGRESS_SPAN,
             ease: "none",
           },
-          0
+          TRUNK_START_PROGRESS
         );
       }
 
@@ -923,10 +1016,10 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
               align: path,
               alignOrigin: [0.5, 0.5],
             },
-            duration: 1,
+            duration: TRUNK_PROGRESS_SPAN,
             ease: "none",
           },
-          0
+          TRUNK_START_PROGRESS
         );
       }
 
@@ -939,60 +1032,41 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
               align: path,
               alignOrigin: [0.5, 0.5],
             },
-            duration: 1,
+            duration: TRUNK_PROGRESS_SPAN,
             ease: "none",
           },
-          0
+          TRUNK_START_PROGRESS
         );
       }
 
-      // Dynamic chromatic sync matching the thread path's canonical color journey aligned with milestone anchors:
-      if (bead) {
-        tl.to(bead, { stroke: "#278F9B", duration: 0.08, ease: "power1.inOut" }, 0.22);
-        tl.to(bead, { stroke: "#C96C8E", duration: 0.08, ease: "power1.inOut" }, 0.35);
-        tl.to(bead, { stroke: "#1595D0", duration: 0.08, ease: "power1.inOut" }, 0.48);
-        tl.to(bead, { stroke: "#278F9B", duration: 0.08, ease: "power1.inOut" }, 0.62);
-        tl.to(bead, { stroke: "#ED247A", duration: 0.08, ease: "power1.inOut" }, 0.76);
-        tl.to(bead, { stroke: "#F5F8FA", duration: 0.08, ease: "power1.inOut" }, 0.92);
-      }
-      if (beadGlow) {
-        tl.to(beadGlow, { fill: "rgba(39, 143, 155, 0.45)", duration: 0.08, ease: "power1.inOut" }, 0.22);
-        tl.to(beadGlow, { fill: "rgba(201, 108, 142, 0.45)", duration: 0.08, ease: "power1.inOut" }, 0.35);
-        tl.to(beadGlow, { fill: "rgba(21, 149, 208, 0.45)", duration: 0.08, ease: "power1.inOut" }, 0.48);
-        tl.to(beadGlow, { fill: "rgba(39, 143, 155, 0.45)", duration: 0.08, ease: "power1.inOut" }, 0.62);
-        tl.to(beadGlow, { fill: "rgba(237, 36, 122, 0.45)", duration: 0.08, ease: "power1.inOut" }, 0.76);
-        tl.to(beadGlow, { fill: "rgba(245, 248, 250, 0.45)", duration: 0.08, ease: "power1.inOut" }, 0.92);
-      }
+      // Dynamic chromatic sync matching the thread path's canonical color journey anchored to exact station arrivals:
+      const ap = pathMetrics?.anchorProgresses ?? {};
+      const sparkStops = APPROVED_HISTORICAL_MILESTONES.map((m, idx) => ({
+        color: m.accentColor || "#1595D0",
+        at:
+          TRUNK_START_PROGRESS +
+          Math.max(0.02, (ap[m.id] ?? (idx + 1) * 0.14) - 0.04) * TRUNK_PROGRESS_SPAN,
+      }));
       const dynamicStrobeStops = [strobeStopStartRef.current, strobeStopEndRef.current].filter(Boolean);
-      if (dynamicStrobeStops.length > 0) {
-        tl.to(dynamicStrobeStops, { stopColor: "#278F9B", duration: 0.08, ease: "power1.inOut" }, 0.22);
-        tl.to(dynamicStrobeStops, { stopColor: "#C96C8E", duration: 0.08, ease: "power1.inOut" }, 0.35);
-        tl.to(dynamicStrobeStops, { stopColor: "#1595D0", duration: 0.08, ease: "power1.inOut" }, 0.48);
-        tl.to(dynamicStrobeStops, { stopColor: "#278F9B", duration: 0.08, ease: "power1.inOut" }, 0.62);
-        tl.to(dynamicStrobeStops, { stopColor: "#ED247A", duration: 0.08, ease: "power1.inOut" }, 0.76);
-        tl.to(dynamicStrobeStops, { stopColor: "#F5F8FA", duration: 0.08, ease: "power1.inOut" }, 0.92);
-      }
       const strobeCore = strobeStopCoreRef.current;
-      if (strobeCore) {
-        tl.to(strobeCore, { stopColor: "#CCFBF1", duration: 0.08, ease: "power1.inOut" }, 0.22);
-        tl.to(strobeCore, { stopColor: "#FCE7F3", duration: 0.08, ease: "power1.inOut" }, 0.35);
-        tl.to(strobeCore, { stopColor: "#F5F8FA", duration: 0.08, ease: "power1.inOut" }, 0.48);
-        tl.to(strobeCore, { stopColor: "#CCFBF1", duration: 0.08, ease: "power1.inOut" }, 0.62);
-        tl.to(strobeCore, { stopColor: "#FCE7F3", duration: 0.08, ease: "power1.inOut" }, 0.76);
-        tl.to(strobeCore, { stopColor: "#F5F8FA", duration: 0.08, ease: "power1.inOut" }, 0.92);
-      }
       const strobeRipple = strobeRippleRef.current;
-      if (strobeRipple) {
-        tl.to(strobeRipple, { stroke: "#CCFBF1", duration: 0.08, ease: "power1.inOut" }, 0.22);
-        tl.to(strobeRipple, { stroke: "#FCE7F3", duration: 0.08, ease: "power1.inOut" }, 0.35);
-        tl.to(strobeRipple, { stroke: "#F5F8FA", duration: 0.08, ease: "power1.inOut" }, 0.48);
-        tl.to(strobeRipple, { stroke: "#CCFBF1", duration: 0.08, ease: "power1.inOut" }, 0.62);
-        tl.to(strobeRipple, { stroke: "#FCE7F3", duration: 0.08, ease: "power1.inOut" }, 0.76);
-        tl.to(strobeRipple, { stroke: "#F5F8FA", duration: 0.08, ease: "power1.inOut" }, 0.92);
-      }
 
-      // 5. Cinematic Station & Card Formation (D-41) for each approved milestone
-      APPROVED_HISTORICAL_MILESTONES.forEach((milestone, milestoneIndex) => {
+      sparkStops.forEach(({ color, at }) => {
+        const coreColor = color === "#278F9B" ? "#CCFBF1" : color === "#ED247A" || color === "#C96C8E" ? "#FCE7F3" : "#F5F8FA";
+        if (bead) tl.to(bead, { stroke: color, duration: 0.06, ease: "power1.inOut" }, at);
+        if (beadGlow) tl.to(beadGlow, { fill: color, opacity: 0.48, duration: 0.06, ease: "power1.inOut" }, at);
+        if (dynamicStrobeStops.length > 0) tl.to(dynamicStrobeStops, { stopColor: color, duration: 0.06, ease: "power1.inOut" }, at);
+        if (strobeCore) tl.to(strobeCore, { stopColor: coreColor, duration: 0.06, ease: "power1.inOut" }, at);
+        if (strobeRipple) tl.to(strobeRipple, { stroke: coreColor, duration: 0.06, ease: "power1.inOut" }, at);
+      });
+      if (bead) tl.to(bead, { stroke: "#F5F8FA", duration: 0.06, ease: "power1.inOut" }, 0.93);
+      if (beadGlow) tl.to(beadGlow, { fill: "#F5F8FA", opacity: 0.45, duration: 0.06, ease: "power1.inOut" }, 0.93);
+      if (dynamicStrobeStops.length > 0) tl.to(dynamicStrobeStops, { stopColor: "#F5F8FA", duration: 0.06, ease: "power1.inOut" }, 0.93);
+      if (strobeCore) tl.to(strobeCore, { stopColor: "#F5F8FA", duration: 0.06, ease: "power1.inOut" }, 0.93);
+      if (strobeRipple) tl.to(strobeRipple, { stroke: "#F5F8FA", duration: 0.06, ease: "power1.inOut" }, 0.93);
+
+      // 5. Trunk Spark Pulse Only (Reversible station reveal & exhibit open/close live in syncMilestoneExhibit)
+      APPROVED_HISTORICAL_MILESTONES.forEach((milestone) => {
         const geometry = milestoneGeometries[milestone.id];
         if (!geometry) return;
 
@@ -1005,317 +1079,18 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             : CARD_FORMATION_LEAD_VIEWBOX_UNITS;
         const formationLeadProgress = formationLeadUnits / pathLength;
         const approachProgress = Math.max(0, anchorProgress - formationLeadProgress);
-        const anchor = anchorRefs.current[milestone.id];
-        const connector = connectorRefs.current[milestone.id];
-        const card = milestoneRefs.current[milestone.id];
-        const mobileCard = mobileMilestoneRefs.current[milestone.id];
-        const frame = isResponsiveComposition
-          ? responsiveFrameTraceRefs.current[milestone.id]
-          : frameTraceRefs.current[milestone.id];
-        const surface = cardSurfaceRefs.current[milestone.id];
-        const portrait = portraitRefs.current[milestone.id];
-        const content = contentRefs.current[milestone.id];
+        const pulseStart =
+          TRUNK_START_PROGRESS +
+          (approachProgress + formationLeadProgress * 0.45) * TRUNK_PROGRESS_SPAN;
+        const pulseStep = formationLeadProgress * TRUNK_PROGRESS_SPAN;
 
-        const leftConnector = leftConnectorRefs.current[milestone.id];
-        // Point-based Contact Trigger: branch only when travelling spark contacts station anchor dot
-        const connectorStart = isExhibitionViewport
-          ? approachProgress + formationLeadProgress * 0.96
-          : approachProgress + formationLeadProgress * 0.75;
-        const connectorDuration = isExhibitionViewport
-          ? formationLeadProgress * 0.06
-          : formationLeadProgress * 0.25;
-
-        if (connector) {
-          tl.to(
-            connector,
-            {
-              strokeDashoffset: 0,
-              duration: connectorDuration,
-              ease: "power2.out",
-            },
-            connectorStart
-          );
-          if (isExhibitionViewport || isResponsiveComposition) {
-            tl.to(
-              connector,
-              {
-                strokeWidth: 3.6,
-                duration: connectorDuration * 0.40,
-                ease: "power2.out",
-              },
-              connectorStart + connectorDuration * 0.35
-            );
-            tl.to(
-              connector,
-              {
-                strokeWidth: 2.4,
-                duration: connectorDuration * 0.40,
-                ease: "power2.out",
-              },
-              connectorStart + connectorDuration * 0.75
-            );
-          }
-        }
-        if (leftConnector && isExhibitionViewport) {
-          tl.to(
-            leftConnector,
-            {
-              autoAlpha: 1,
-              strokeDashoffset: 0,
-              duration: connectorDuration,
-              ease: "power2.out",
-            },
-            connectorStart
-          );
-          tl.to(
-            leftConnector,
-            {
-              strokeWidth: 3.2,
-              duration: connectorDuration * 0.40,
-              ease: "power2.out",
-            },
-            connectorStart + connectorDuration * 0.35
-          );
-          tl.to(
-            leftConnector,
-            {
-              strokeWidth: 2.2,
-              duration: connectorDuration * 0.40,
-              ease: "power2.out",
-            },
-            connectorStart + connectorDuration * 0.75
-          );
-        }
-
-        // The station charges up and blooms as the spark contacts the anchor (Point-based Contact Trigger)
-        if (anchor && (isExhibitionViewport || isResponsiveComposition)) {
-          tl.to(
-            anchor,
-            {
-              autoAlpha: 1,
-              scale: 1.4,
-              duration: isExhibitionViewport ? formationLeadProgress * 0.06 : formationLeadProgress * 0.18,
-              ease: "back.out(2)",
-            },
-            connectorStart
-          );
-          tl.to(
-            anchor,
-            {
-              scale: 1,
-              duration: isExhibitionViewport ? formationLeadProgress * 0.05 : formationLeadProgress * 0.10,
-              ease: "power2.out",
-            },
-            connectorStart + (isExhibitionViewport ? formationLeadProgress * 0.06 : formationLeadProgress * 0.18)
-          );
-        }
-
-        // The travelling spark briefly intensifies at each encounter.
         if (bead) {
-          tl.to(
-            bead,
-            { scale: 1.65, duration: formationLeadProgress * 0.05, ease: "power2.out" },
-            connectorStart
-          );
-          tl.to(
-            bead,
-            { scale: 1, duration: formationLeadProgress * 0.06, ease: "power2.out" },
-            connectorStart + formationLeadProgress * 0.05
-          );
+          tl.to(bead, { scale: 1.55, duration: pulseStep * 0.06, ease: "power2.out" }, pulseStart);
+          tl.to(bead, { scale: 1, duration: pulseStep * 0.08, ease: "power2.out" }, pulseStart + pulseStep * 0.06);
         }
         if (beadGlow) {
-          tl.to(
-            beadGlow,
-            { scale: 1.5, duration: formationLeadProgress * 0.05, ease: "power2.out" },
-            connectorStart
-          );
-          tl.to(
-            beadGlow,
-            { scale: 1, duration: formationLeadProgress * 0.06, ease: "power2.out" },
-            connectorStart + formationLeadProgress * 0.05
-          );
-        }
-
-        if (isExhibitionViewport && milestoneIndex > 0) {
-          const previousMilestone = APPROVED_HISTORICAL_MILESTONES[milestoneIndex - 1];
-          const previousCard = milestoneRefs.current[previousMilestone.id];
-          const previousConnector = connectorRefs.current[previousMilestone.id];
-          const previousFrame = frameTraceRefs.current[previousMilestone.id];
-          const recedeStart = approachProgress + formationLeadProgress * 0.20;
-          const recedeDuration = formationLeadProgress * 0.35;
-
-          // Previous encounters remain in the archive, but retreat as quiet
-          // peripheral memories instead of appearing clipped and equally active.
-          if (previousCard) {
-            tl.to(
-              previousCard,
-              { autoAlpha: 0.16, duration: recedeDuration, ease: "power1.out" },
-              recedeStart
-            );
-          }
-          if (previousConnector) {
-            tl.to(
-              previousConnector,
-              { strokeOpacity: 0.16, duration: recedeDuration, ease: "power1.out" },
-              recedeStart
-            );
-          }
-          const previousLeftConnector = leftConnectorRefs.current[previousMilestone.id];
-          if (previousLeftConnector) {
-            tl.to(
-              previousLeftConnector,
-              { strokeOpacity: 0.16, duration: recedeDuration, ease: "power1.out" },
-              recedeStart
-            );
-          }
-          if (previousFrame) {
-            tl.to(
-              previousFrame,
-              { strokeOpacity: 0.12, duration: recedeDuration, ease: "power1.out" },
-              recedeStart
-            );
-          }
-        }
-
-        if (isResponsiveComposition) {
-          if (mobileCard) {
-            tl.to(
-              mobileCard,
-              { autoAlpha: 1, duration: formationLeadProgress * 0.05, ease: "none" },
-              approachProgress + formationLeadProgress * 0.86
-            );
-            tl.to(
-              mobileCard,
-              {
-                clipPath: "inset(0% 0% 0% 0%)",
-                duration: formationLeadProgress * 0.12,
-                ease: "power2.inOut",
-              },
-              approachProgress + formationLeadProgress * 0.88
-            );
-          }
-          if (frame) {
-            tl.to(
-              frame,
-              {
-                strokeDashoffset: 0,
-                strokeOpacity: 1,
-                duration: formationLeadProgress * 0.12,
-                ease: "none",
-              },
-              approachProgress + formationLeadProgress * 0.88
-            );
-          }
-        } else if (isExhibitionViewport) {
-          if (card) {
-            const approachOffset = geometry.approachOffset || 0;
-            if (approachOffset > 0) {
-              tl.fromTo(
-                card,
-                { y: -approachOffset },
-                { y: 0, duration: formationLeadProgress * 0.75, ease: "power2.out" },
-                approachProgress
-              );
-            }
-            // Keep card container visible through entire encounter and exit runway down to 0.78 lead
-            tl.to(
-              card,
-              { autoAlpha: 1, duration: formationLeadProgress * 0.08, ease: "power1.out" },
-              approachProgress + formationLeadProgress * 0.78
-            );
-          }
-          if (frame) {
-            tl.to(
-              frame,
-              {
-                strokeDashoffset: 0,
-                strokeOpacity: 0.25,
-                duration: formationLeadProgress * 0.06,
-                ease: "power2.out",
-              },
-              approachProgress + formationLeadProgress * 0.96
-            );
-          }
-          if (surface) {
-            tl.to(
-              surface,
-              {
-                opacity: 1,
-                duration: formationLeadProgress * 0.08,
-                ease: "power2.out",
-              },
-              approachProgress + formationLeadProgress * 0.88
-            );
-          }
-          if (portrait) {
-            // Ethereal emergence of pioneer cutout: floats up from 14px, scales up from 0.92, and fades in smoothly
-            tl.to(
-              portrait,
-              {
-                autoAlpha: 1,
-                scale: 1,
-                y: 0,
-                duration: formationLeadProgress * 0.14,
-                ease: "power2.out",
-              },
-              approachProgress + formationLeadProgress * 0.92
-            );
-          }
-        } else {
-          if (card) {
-            tl.to(card, { autoAlpha: 1, duration: 0.008, ease: "none" }, approachProgress + 0.004);
-          }
-          if (frame) {
-            tl.to(
-              frame,
-              { strokeDashoffset: 0, duration: 0.024, ease: "power1.out" },
-              approachProgress + 0.004
-            );
-          }
-          if (surface) {
-            tl.to(
-              surface,
-              { opacity: 1, duration: 0.018, ease: "power2.out" },
-              approachProgress + 0.007
-            );
-          }
-          if (anchor) {
-            tl.to(
-              anchor,
-              { autoAlpha: 1, scale: 1, duration: 0.016, ease: "back.out(1.6)" },
-              approachProgress + 0.01
-            );
-          }
-          if (portrait) {
-            tl.to(
-              portrait,
-              { autoAlpha: 1, scale: 1, duration: 0.015, ease: "power2.out" },
-              approachProgress + 0.01
-            );
-          }
-          if (content) {
-            tl.to(
-              content,
-              { autoAlpha: 1, y: 0, duration: 0.014, ease: "power2.out" },
-              approachProgress + 0.012
-            );
-          }
-        }
-
-        if (mobileCard && !isExhibitionViewport && !isResponsiveComposition) {
-          tl.to(
-            mobileCard,
-            { autoAlpha: 1, y: 0, duration: 0.018, ease: "power2.out" },
-            approachProgress + 0.004
-          );
-        }
-
-        if (frame) {
-          tl.to(
-            frame,
-            { strokeOpacity: 0.58, duration: 0.02, ease: "power1.out" },
-            anchorProgress + 0.012
-          );
+          tl.to(beadGlow, { scale: 1.45, duration: pulseStep * 0.06, ease: "power2.out" }, pulseStart);
+          tl.to(beadGlow, { scale: 1, duration: pulseStep * 0.08, ease: "power2.out" }, pulseStart + pulseStep * 0.06);
         }
       });
 
@@ -1330,33 +1105,226 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
     const timeline = progressTimelineRef.current;
     if (prefersReducedMotion || !timeline) return;
 
-    const setHistoryProgress = (progress: number) => {
+    const setStationRevealed = (mId: string, revealed: boolean, instant: boolean) => {
+      if (!!revealedStationsRef.current[mId] === revealed) return;
+      revealedStationsRef.current[mId] = revealed;
+
+      const anchor = anchorRefs.current[mId];
+      const connector = connectorRefs.current[mId];
+      const innerConnector = innerConnectorRefs.current[mId];
+      const leftConnector = leftConnectorRefs.current[mId];
+      const card = milestoneRefs.current[mId];
+      const mobileCard = mobileMilestoneRefs.current[mId];
+      const frame = isResponsiveComposition
+        ? responsiveFrameTraceRefs.current[mId]
+        : frameTraceRefs.current[mId];
+      const surface = cardSurfaceRefs.current[mId];
+      const portrait = portraitRefs.current[mId];
+      const identity = identityRefs.current[mId];
+      const content = contentRefs.current[mId];
+
+      const targets = [
+        anchor,
+        connector,
+        innerConnector,
+        leftConnector,
+        card,
+        mobileCard,
+        frame,
+        surface,
+        portrait,
+        identity,
+        content,
+      ].filter(Boolean);
+      if (targets.length > 0) gsap.killTweensOf(targets);
+
+      if (!revealed) {
+        const connectorLen = connector?.getTotalLength() || 400;
+        const innerLen = innerConnector?.getTotalLength() || 120;
+        const leftLen = leftConnector?.getTotalLength() || 400;
+        if (instant) {
+          if (anchor) gsap.set(anchor, { autoAlpha: 0, scale: 0.35 });
+          if (connector) gsap.set(connector, { autoAlpha: 0, strokeDashoffset: connectorLen });
+          if (innerConnector) gsap.set(innerConnector, { opacity: 0, strokeDashoffset: innerLen });
+          if (leftConnector) gsap.set(leftConnector, { autoAlpha: 0, strokeDashoffset: leftLen });
+          if (card) gsap.set(card, { autoAlpha: 0 });
+          if (mobileCard) gsap.set(mobileCard, { autoAlpha: 0 });
+          if (frame) gsap.set(frame, { strokeOpacity: 0, opacity: 0 });
+          if (surface) gsap.set(surface, { opacity: 0 });
+          if (portrait) gsap.set(portrait, { autoAlpha: 0, scale: 0.94, y: 12 });
+          return;
+        }
+        // Reversible retraction back into the main thread when scrolling up past this station
+        if (card) gsap.to(card, { autoAlpha: 0, duration: 0.28, ease: "power2.in" });
+        if (mobileCard) gsap.to(mobileCard, { autoAlpha: 0, duration: 0.28, ease: "power2.in" });
+        if (portrait) gsap.to(portrait, { autoAlpha: 0, scale: 0.94, y: 10, duration: 0.28, ease: "power2.in" });
+        if (surface) gsap.to(surface, { opacity: 0, duration: 0.25, ease: "power2.in" });
+        if (frame) gsap.to(frame, { strokeOpacity: 0, opacity: 0, duration: 0.25 });
+        if (innerConnector && isExhibitionViewport) {
+          gsap.to(innerConnector, { strokeDashoffset: innerLen, opacity: 0, duration: 0.22, ease: "power2.in" });
+        }
+        if (connector) gsap.to(connector, { strokeDashoffset: connectorLen, autoAlpha: 0, duration: 0.38, delay: 0.12, ease: "power2.inOut" });
+        if (leftConnector && isExhibitionViewport) {
+          gsap.to(leftConnector, { strokeDashoffset: leftLen, autoAlpha: 0, duration: 0.38, delay: 0.12, ease: "power2.inOut" });
+        }
+        if (anchor) gsap.to(anchor, { autoAlpha: 0, scale: 0.35, duration: 0.24, delay: 0.22, ease: "power2.in" });
+        return;
+      }
+
+      if (instant) {
+        if (anchor) gsap.set(anchor, { autoAlpha: 1, scale: 1 });
+        if (connector) gsap.set(connector, { autoAlpha: 1, strokeDashoffset: 0 });
+        if (innerConnector) {
+          const isOpen = (exhibitProgressRef.current[mId] ?? 0) > 0.24;
+          gsap.set(innerConnector, { opacity: isOpen ? 0 : 0.98, strokeDashoffset: isOpen ? (innerConnector.getTotalLength() || 120) : 0 });
+        }
+        if (leftConnector) gsap.set(leftConnector, { autoAlpha: 1, strokeDashoffset: 0 });
+        if (card) gsap.set(card, { autoAlpha: 1, y: 0, clipPath: isExhibitionViewport ? "none" : "inset(0% 0% 0% 0%)" });
+        if (mobileCard) gsap.set(mobileCard, { autoAlpha: 1, y: 0, clipPath: "inset(0% 0% 0% 0%)" });
+        if (frame) gsap.set(frame, { strokeDashoffset: 0, strokeOpacity: isResponsiveComposition ? 1 : 0, opacity: isResponsiveComposition ? 1 : 0 });
+        if (surface) gsap.set(surface, { opacity: 1 });
+        if (portrait) gsap.set(portrait, { autoAlpha: 1, scale: 1, y: 0 });
+        if (identity) gsap.set(identity, { autoAlpha: 1, y: 0 });
+        if (content) gsap.set(content, { autoAlpha: 1, y: 0 });
+        return;
+      }
+
+      // 1. Anchor bloom + curved branches physically growing outward from main thread
+      if (anchor) {
+        gsap.to(anchor, {
+          autoAlpha: 1,
+          scale: 1.22,
+          duration: 0.18,
+          ease: "power2.out",
+          onComplete: () => {
+            gsap.to(anchor, { scale: 1, duration: 0.16, ease: "power2.out" });
+          },
+        });
+      }
+      if (connector) {
+        gsap.to(connector, { autoAlpha: 1, strokeDashoffset: 0, duration: 0.34, ease: "power2.out" });
+      }
+      if (innerConnector && isExhibitionViewport && (exhibitProgressRef.current[mId] ?? 0) <= 0.04) {
+        gsap.to(innerConnector, { opacity: 0.98, strokeDashoffset: 0, duration: 0.20, delay: 0.14, ease: "power2.out" });
+      }
+      if (leftConnector && isExhibitionViewport) {
+        gsap.to(leftConnector, { autoAlpha: 1, strokeDashoffset: 0, duration: 0.38, ease: "power2.out" });
+      }
+
+      // 2. Materialize cutout portrait and closed artifact right away to avoid blind-spot flashes
+      if (card) {
+        gsap.to(card, {
+          autoAlpha: 1,
+          y: 0,
+          clipPath: isExhibitionViewport ? "none" : "inset(0% 0% 0% 0%)",
+          duration: 0.32,
+          delay: 0.08,
+          ease: "power2.out",
+        });
+      }
+      if (mobileCard) {
+        gsap.to(mobileCard, {
+          autoAlpha: 1,
+          y: 0,
+          clipPath: "inset(0% 0% 0% 0%)",
+          duration: 0.30,
+          delay: 0.08,
+          ease: "power2.out",
+        });
+      }
+      if (portrait) {
+        gsap.to(portrait, {
+          autoAlpha: 1,
+          scale: 1,
+          y: 0,
+          duration: 0.32,
+          delay: 0.08,
+          ease: "power2.out",
+        });
+      }
+      if (surface) {
+        gsap.to(surface, { opacity: 1, duration: 0.28, delay: 0.08, ease: "power2.out" });
+      }
+      if (frame) {
+        gsap.to(frame, {
+          strokeDashoffset: 0,
+          strokeOpacity: isResponsiveComposition ? 1 : 0,
+          opacity: isResponsiveComposition ? 1 : 0,
+          duration: 0.36,
+          delay: 0.10,
+          ease: "power2.out",
+        });
+      }
+      if (identity) gsap.to(identity, { autoAlpha: 1, y: 0, duration: 0.26, delay: 0.08 });
+      if (content) gsap.to(content, { autoAlpha: 1, y: 0, duration: 0.26, delay: 0.10 });
+    };
+
+    const syncMilestoneExhibit = (mId: string, progress: number) => {
+      const geo = milestoneGeometries[mId];
+      if (!geo) return;
+      const totalLen = pathMetrics?.pathLength || 10500;
+      const anchorP = pathMetrics?.anchorProgresses?.[mId] ?? geo.anchorY / WORLD_STAGE_HEIGHT;
+      const leadP = (isExhibitionViewport ? exhibitionFormationLeadUnits : responsiveFormationLeadUnits) / totalLen;
+      const approachP = Math.max(0, anchorP - leadP);
+      const trunkProgress = Math.max(0, (progress - TRUNK_START_PROGRESS) / TRUNK_PROGRESS_SPAN);
+
+      const revealThreshold = isExhibitionViewport
+        ? Math.max(0, anchorP - leadP * 0.55)
+        : approachP + leadP * 0.42;
+
+      if (trunkProgress >= revealThreshold) {
+        if (!revealedStationsRef.current[mId]) {
+          const passedWellPast = trunkProgress > anchorP + leadP * 1.15;
+          setStationRevealed(mId, true, passedWellPast);
+        }
+      } else {
+        if (revealedStationsRef.current[mId]) {
+          const jumpedFarBack = trunkProgress < Math.max(0, revealThreshold - 0.12);
+          setStationRevealed(mId, false, jumpedFarBack);
+        }
+        if (stationActivatedRef.current[mId]) {
+          stationActivatedRef.current[mId] = false;
+          scrollRefs.current[mId]?.playExit();
+        }
+        return;
+      }
+
+      const enterThreshold = isExhibitionViewport ? (anchorP - leadP * 0.36) : (approachP + leadP * 0.40);
+      const exitThreshold = isExhibitionViewport ? (anchorP + leadP * 1.45) : Math.min(1, anchorP + leadP * 0.95);
+      const isInside = trunkProgress >= enterThreshold && trunkProgress <= exitThreshold;
+      const wasActive = !!stationActivatedRef.current[mId];
+
+      if (isExhibitionViewport) {
+        // Trigger self-completing 4-beat disassembly once in the focus window so
+        // cards always finish unfolding cleanly even if the user stops scrolling.
+        if (isInside && !wasActive) {
+          stationActivatedRef.current[mId] = true;
+          scrollRefs.current[mId]?.playEntrance();
+        } else if (!isInside && wasActive) {
+          stationActivatedRef.current[mId] = false;
+          scrollRefs.current[mId]?.playExit();
+        }
+        return;
+      }
+
+      stationActivatedRef.current[mId] = isInside;
+    };
+
+    const setHistoryProgress = (progress: number, worldOffsetPx?: number) => {
+      const clamped = Math.max(0, Math.min(1, progress));
+      effectiveHistoryProgressRef.current = clamped;
+      if (typeof worldOffsetPx === "number") {
+        cameraWorldOffsetRef.current = worldOffsetPx;
+        if (worldLayerRef.current) {
+          worldLayerRef.current.style.transform = `translate3d(0, ${-worldOffsetPx.toFixed(2)}px, 0)`;
+        }
+      }
       if (progressTimelineRef.current !== timeline) return;
-      timeline.progress(Math.max(0, Math.min(1, progress)), false);
-      if (progress >= 0.98 && onForkReached) onForkReached();
+      timeline.progress(clamped, false);
+      if (clamped >= 0.98 && onForkReached) onForkReached();
 
       APPROVED_HISTORICAL_MILESTONES.forEach((m) => {
-        const geo = milestoneGeometries[m.id];
-        if (!geo) return;
-        const totalLen = pathMetrics?.pathLength || 7100;
-        const anchorP = (pathMetrics?.anchorProgresses?.[m.id] ?? geo.anchorY / TIMELINE_STAGE_HEIGHT);
-        const leadP = (isExhibitionViewport ? exhibitionFormationLeadUnits : responsiveFormationLeadUnits) / totalLen;
-        const approachP = Math.max(0, anchorP - leadP);
-        const recedeP = Math.min(1, anchorP + leadP * 0.95);
-
-        // Point-based Contact Threshold: fire entrance literally on anchor contact (within ~8px of dot)
-        // Three-phase hysteresis enables smooth reversible exit and prevents cached states
-        const enterThreshold = isExhibitionViewport ? (anchorP - leadP * 0.02) : (approachP + leadP * 0.82);
-        const exitThreshold = isExhibitionViewport ? (anchorP - leadP * 0.08) : (approachP + leadP * 0.75);
-        const resetThreshold = isExhibitionViewport ? (anchorP - leadP * 0.20) : (approachP + leadP * 0.60);
-
-        if (progress >= enterThreshold && progress <= recedeP) {
-          scrollRefs.current[m.id]?.playEntrance();
-        } else if (progress < exitThreshold && progress >= resetThreshold) {
-          scrollRefs.current[m.id]?.playExit();
-        } else if (progress < resetThreshold) {
-          scrollRefs.current[m.id]?.resetStaged();
-        }
+        syncMilestoneExhibit(m.id, clamped);
       });
     };
 
@@ -1365,16 +1333,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
     journeyProgressRef.current.sync?.();
 
     APPROVED_HISTORICAL_MILESTONES.forEach((m) => {
-      const geo = milestoneGeometries[m.id];
-      if (!geo) return;
-      const totalLen = pathMetrics?.pathLength || 7100;
-      const anchorP = (pathMetrics?.anchorProgresses?.[m.id] ?? geo.anchorY / TIMELINE_STAGE_HEIGHT);
-      const leadP = (isExhibitionViewport ? exhibitionFormationLeadUnits : responsiveFormationLeadUnits) / totalLen;
-      const approachP = Math.max(0, anchorP - leadP);
-      const enterThreshold = isExhibitionViewport ? (anchorP - leadP * 0.02) : (approachP + leadP * 0.82);
-      if (timeline.progress() >= enterThreshold) {
-        scrollRefs.current[m.id]?.playEntrance();
-      }
+      syncMilestoneExhibit(m.id, timeline.progress());
     });
 
     return () => {
@@ -1395,6 +1354,13 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
     historyProgressMap,
   ]);
 
+  const outerStageHeight = prefersReducedMotion
+    ? (isResponsiveComposition ? RESPONSIVE_WORLD_STAGE_HEIGHT : WORLD_STAGE_HEIGHT)
+    : (isResponsiveComposition ? RESPONSIVE_TIMELINE_STAGE_HEIGHT : TIMELINE_STAGE_HEIGHT);
+  const worldStageHeight = isResponsiveComposition
+    ? RESPONSIVE_WORLD_STAGE_HEIGHT
+    : WORLD_STAGE_HEIGHT;
+
   return (
     <div
       ref={containerRef}
@@ -1402,33 +1368,13 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
       data-testid="thread-timeline"
       suppressHydrationWarning
       className="relative w-full text-[#F5F8FA] selection:bg-[#1595D0]/30 selection:text-[#F5F8FA]"
-      style={{ height: isResponsiveComposition ? `${RESPONSIVE_TIMELINE_STAGE_HEIGHT}px` : `${TIMELINE_STAGE_HEIGHT}px`, backgroundColor: "transparent" }}
+      style={{ height: `${outerStageHeight}px`, backgroundColor: "transparent" }}
       aria-label="The Thread We Carry — Darkness-First Historical Timeline"
     >
-      {/* Viewport 1: Darkness-first Opening & Golden Spark (Absolute so it does not displace subsequent DOM elements) */}
-      <div className="absolute top-0 left-0 w-full h-screen flex flex-col items-center justify-start pt-20 sm:pt-28 pointer-events-none z-10">
-        {/* Warm Golden Spark Header — Pure Darkness-First Atmosphere */}
-        <div
-          ref={headerRef}
-          className="flex flex-col items-center text-center px-4 max-w-xl"
-        >
-          <span className="sr-only">SSN ACM-W</span>
-          <h1 className="text-3xl sm:text-5xl font-serif tracking-tight text-[#F5F8FA] mb-6 leading-tight">
-            Every possibility begins somewhere.
-          </h1>
-
-          {/* Discreet Scroll Prompt */}
-          <div
-            ref={promptRef}
-            className="inline-flex items-center gap-2 text-xs font-mono text-[#1595D0] animate-pulse"
-          >
-            <span>Scroll to draw the thread</span>
-            <span>↓</span>
-          </div>
-        </div>
-
+      {/* Sticky Camera Frame: pins during opening logo birth & per-station dwell windows */}
+      <div className={prefersReducedMotion ? "relative w-full" : "sticky top-0 h-screen w-full overflow-hidden"}>
         {/* Quick Skip Controls (Keyboard accessible) */}
-        <div className="absolute top-4 right-4 pointer-events-auto flex items-center gap-2">
+        <div className="absolute top-4 right-4 z-30 pointer-events-auto flex items-center gap-2">
           {onSkipToFork && (
             <button
               onClick={onSkipToFork}
@@ -1446,14 +1392,70 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             </button>
           )}
         </div>
-      </div>
 
-      {/* Authoritative Shared SVG Stage: Timeline Thread, Stations, Connectors, Frame Traces, and ForeignObject Cards */}
-      <div
-        className="relative w-full max-w-[1020px] mx-auto pointer-events-none z-20"
-        style={{ height: isResponsiveComposition ? `${RESPONSIVE_TIMELINE_STAGE_HEIGHT}px` : `${TIMELINE_STAGE_HEIGHT}px` }}
-        suppressHydrationWarning
-      >
+        {/* Viewport 1: Deep-space Void Opening Copy */}
+        <div className="absolute top-0 left-0 w-full h-screen flex flex-col items-center justify-start pt-48 sm:pt-56 pointer-events-none z-10">
+          {/* Warm Golden Spark Header — Pure Darkness-First Atmosphere */}
+          <div ref={headerRef} className="w-full flex justify-center">
+            <div
+              ref={heroIntroRef}
+              className="hero-intro-void-init flex flex-col items-center text-center px-4 max-w-xl"
+            >
+              <span className="sr-only">SSN ACM-W</span>
+              <h1 className="text-3xl sm:text-5xl font-serif tracking-tight text-[#F5F8FA] mb-6 leading-tight">
+                Every possibility begins somewhere.
+              </h1>
+
+              {/* Discreet Scroll Prompt */}
+              <div
+                ref={promptRef}
+                className="inline-flex items-center gap-2 text-xs font-mono text-[#1595D0] animate-pulse"
+              >
+                <span>Scroll to draw the thread</span>
+                <span>↓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Authoritative Shared SVG Stage + Canvas Helix locked to single cameraWorldOffsetRef */}
+        <div
+          className="relative w-full max-w-[1020px] mx-auto pointer-events-none z-20"
+          style={{ height: prefersReducedMotion ? `${worldStageHeight}px` : "100%" }}
+          suppressHydrationWarning
+        >
+          {pathMetrics && pathMetrics.centerlineSamples.length >= 2 && (
+            <LivingHelixOverlay
+              stageRef={containerRef}
+              historyProgressRef={effectiveHistoryProgressRef}
+              cameraWorldOffsetRef={cameraWorldOffsetRef}
+              centerlineSamples={pathMetrics.centerlineSamples}
+              milestoneStops={APPROVED_HISTORICAL_MILESTONES.map((m): MilestoneColorStop => {
+                const geo = milestoneGeometries[m.id];
+                return {
+                  id: m.id,
+                  anchorProgress: pathMetrics.anchorProgresses[m.id] ?? 0,
+                  anchorY: geo?.anchorY ?? 0,
+                  color: m.accentColor || "#1595D0",
+                };
+              })}
+              viewBoxWidth={isResponsiveComposition ? responsiveStageWidth : 1000}
+              responsiveScaleY={
+                isResponsiveComposition
+                  ? RESPONSIVE_WORLD_STAGE_HEIGHT / RESPONSIVE_VIEWBOX_HEIGHT
+                  : undefined
+              }
+              prefersReducedMotion={prefersReducedMotion}
+            />
+          )}
+          <div
+            ref={worldLayerRef}
+            className="relative w-full will-change-transform"
+            style={{
+              height: `${worldStageHeight}px`,
+              transform: prefersReducedMotion ? "none" : undefined,
+            }}
+          >
         <svg
           key={`timeline-svg-${isResponsiveComposition ? "responsive" : "desktop"}`}
           viewBox={isResponsiveComposition ? `0 0 ${responsiveStageWidth} ${RESPONSIVE_VIEWBOX_HEIGHT}` : `0 0 1000 ${DESKTOP_VIEWBOX_HEIGHT}`}
@@ -1463,27 +1465,27 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
           suppressHydrationWarning
         >
           <defs>
-            {/* Canonical Luminous Thread Gradient Synchronized to Milestone Anchors */}
+            {/* Canonical Luminous Thread Gradient Synchronized to Exact Pioneer Anchors */}
             <linearGradient id="parentThreadGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#1595D0" />
-              <stop offset="12%" stopColor="#1595D0" />
+              <stop offset="11%" stopColor="#1595D0" />
               <stop offset="25%" stopColor="#278F9B" />
               <stop offset="39%" stopColor="#C96C8E" />
-              <stop offset="53%" stopColor="#1595D0" />
-              <stop offset="67%" stopColor="#278F9B" />
-              <stop offset="81%" stopColor="#ED247A" />
-              <stop offset="100%" stopColor="#1595D0" />
+              <stop offset="52%" stopColor="#1595D0" />
+              <stop offset="66%" stopColor="#278F9B" />
+              <stop offset="80%" stopColor="#ED247A" />
+              <stop offset="100%" stopColor="#ED247A" />
             </linearGradient>
 
             <linearGradient id="parentBeamEnvelopeGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1595D0" stopOpacity="0.18" />
-              <stop offset="12%" stopColor="#1595D0" stopOpacity="0.22" />
-              <stop offset="25%" stopColor="#278F9B" stopOpacity="0.20" />
-              <stop offset="39%" stopColor="#C96C8E" stopOpacity="0.20" />
-              <stop offset="53%" stopColor="#1595D0" stopOpacity="0.22" />
-              <stop offset="67%" stopColor="#278F9B" stopOpacity="0.20" />
-              <stop offset="81%" stopColor="#ED247A" stopOpacity="0.25" />
-              <stop offset="100%" stopColor="#1595D0" stopOpacity="0.20" />
+              <stop offset="0%" stopColor="#1595D0" stopOpacity="0.16" />
+              <stop offset="11%" stopColor="#1595D0" stopOpacity="0.20" />
+              <stop offset="25%" stopColor="#278F9B" stopOpacity="0.18" />
+              <stop offset="39%" stopColor="#C96C8E" stopOpacity="0.18" />
+              <stop offset="52%" stopColor="#1595D0" stopOpacity="0.20" />
+              <stop offset="66%" stopColor="#278F9B" stopOpacity="0.18" />
+              <stop offset="80%" stopColor="#ED247A" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#ED247A" stopOpacity="0.18" />
             </linearGradient>
 
             <linearGradient id="forwardFlowRayGradient" x1="0" y1="0" x2="0" y2="1">
@@ -1506,31 +1508,12 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
               <stop offset="100%" stopColor="#ED247A" stopOpacity="0" />
             </radialGradient>
 
-            {/* Expanded bounds keep the source falloff outside the filter region. */}
-            <filter id="goldenBeadGlow" x="-250%" y="-250%" width="600%" height="600%">
-              <feGaussianBlur stdDeviation="8" result="blur1" />
-              <feMerge>
-                <feMergeNode in="blur1" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-
-            {/* Glowing filters for continuous timeline strobing and suspended particles */}
-            <filter id="timelineStrobeGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-
-            <filter id="particleGlow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
+            {/* Zero-blur radial glow for the travelling spark halo */}
+            <radialGradient id="beadRadialHalo">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
+              <stop offset="40%" stopColor="#FFD700" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#1595D0" stopOpacity="0" />
+            </radialGradient>
 
             <mask
               id="parentThreadRevealMask"
@@ -1546,21 +1529,13 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                 d={parentPathD}
                 fill="none"
                 stroke="white"
-                strokeWidth="28"
+                strokeWidth={pathMetrics ? "28" : "0"}
                 strokeLinecap="round"
-                strokeDasharray={pathMetrics?.pathLength ?? 1}
-                strokeDashoffset={pathMetrics?.pathLength ?? 1}
+                strokeDasharray={pathMetrics?.pathLength ?? 0}
+                strokeDashoffset={pathMetrics?.pathLength ?? 0}
+                opacity={pathMetrics ? 1 : 0}
               />
             </mask>
-
-            {/* Card Frame Trace Glow Filter */}
-            <filter id="cardTraceGlow" x="-30%" y="-30%" width="160%" height="160%">
-              <feGaussianBlur stdDeviation="4" result="traceBlur" />
-              <feMerge>
-                <feMergeNode in="traceBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
           </defs>
 
           {/* Source-following ambient falloff; radial gradient avoids a rectangular blur surface. */}
@@ -1568,20 +1543,21 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             ref={sourceAmbientRef}
             data-testid="travelling-source-ambient"
             cx={threadX}
-            cy="40"
+            cy="350"
             r="68"
             fill="url(#travellingSourceAmbient)"
             opacity={0}
           />
 
-          {/* Layered, translucent historical beam. All copies share the measured parent path. */}
+          {/* Layered, translucent historical center spine slimmed so rotating helix stands out cleanly. */}
           <path
             ref={beamEnvelopeRef}
             data-testid="parent-beam-envelope"
             d={parentPathD}
             fill="none"
             stroke="url(#parentBeamEnvelopeGradient)"
-            strokeWidth="22"
+            strokeWidth="12"
+            strokeOpacity="0.45"
             strokeLinecap="round"
             opacity={0}
           />
@@ -1591,32 +1567,35 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             d={parentPathD}
             fill="none"
             stroke="url(#parentThreadGradient)"
-            strokeWidth="9"
+            strokeWidth="3.6"
+            strokeOpacity="0.42"
             strokeLinecap="round"
             opacity={0}
           />
           <path
             ref={beamFibreLeftRef}
             d={parentPathD}
-            transform="translate(-1.8 0)"
+            transform="translate(-1.2 0)"
             fill="none"
             stroke="#F5F8FA"
-            strokeWidth="1.1"
+            strokeWidth="0.8"
+            strokeOpacity="0.45"
             strokeLinecap="round"
             opacity={0}
           />
           <path
             ref={beamFibreRightRef}
             d={parentPathD}
-            transform="translate(1.8 0)"
+            transform="translate(1.2 0)"
             fill="none"
             stroke="#1595D0"
-            strokeWidth="0.9"
+            strokeWidth="0.7"
+            strokeOpacity="0.45"
             strokeLinecap="round"
             opacity={0}
           />
 
-          {/* Active parent core stays above the fibre body but below the visible flow and particles. */}
+          {/* Active parent core stays subtle inside the rotating LivingHelixOverlay */}
           <path
             ref={pathRef}
             id="parent-thread-path"
@@ -1624,7 +1603,8 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             d={parentPathD}
             fill="none"
             stroke="url(#parentThreadGradient)"
-            strokeWidth="3.5"
+            strokeWidth="1.9"
+            strokeOpacity="0.72"
             strokeLinecap="round"
             opacity={prefersReducedMotion ? 1 : 0}
           />
@@ -1645,7 +1625,6 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
           />
 
           {/* Continuous light strobing streaming downward through the revealed timeline */}
-          {/* Layer 1: Hardware-Accelerated Outer Halo (Zero GPU Blur Buffer) */}
           <path
             id="timeline-light-strobe-halo"
             data-testid="timeline-light-strobe-halo"
@@ -1657,9 +1636,8 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             strokeDasharray="90 380"
             className="timeline-strobe-primary pointer-events-none"
             mask="url(#parentThreadRevealMask)"
-            opacity={prefersReducedMotion ? 0 : 0.26}
+            opacity={pathMetrics ? (prefersReducedMotion ? 0 : 0.26) : 0}
           />
-          {/* Layer 2: Concentrated Inner Core */}
           <path
             id="timeline-light-strobe-pulse"
             data-testid="timeline-light-strobe-pulse"
@@ -1671,9 +1649,8 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             strokeDasharray="90 380"
             className="timeline-strobe-primary pointer-events-none"
             mask="url(#parentThreadRevealMask)"
-            opacity={prefersReducedMotion ? 0 : 0.94}
+            opacity={pathMetrics ? (prefersReducedMotion ? 0 : 0.94) : 0}
           />
-          {/* Layer 3: Secondary Fast Harmonic Ripple */}
           <path
             ref={strobeRippleRef}
             id="timeline-light-strobe-ripple"
@@ -1686,7 +1663,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             strokeDasharray="40 240"
             className="timeline-strobe-secondary pointer-events-none"
             mask="url(#parentThreadRevealMask)"
-            opacity={prefersReducedMotion ? 0 : 0.72}
+            opacity={pathMetrics ? (prefersReducedMotion ? 0 : 0.72) : 0}
           />
 
           {/* Suspended flecks along the thread body */}
@@ -1700,7 +1677,6 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
               cy={particle.y}
               r={particle.radius}
               fill={PARTICLE_COLORS[particle.id % PARTICLE_COLORS.length]}
-              filter="url(#particleGlow)"
               opacity={prefersReducedMotion ? particle.opacity : 0}
               className={`thread-body-particle thread-particle-drift-${(particle.id % 4) + 1}`}
               style={{
@@ -1710,32 +1686,6 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
               aria-hidden="true"
             />
           ))}
-
-          {/* Secondary masked sparkle field dotted along the thread body */}
-          <g
-            id="thread-body-sparkle-field"
-            data-testid="thread-body-sparkle-field"
-            mask="url(#parentThreadRevealMask)"
-            className="pointer-events-none"
-            aria-hidden="true"
-          >
-            {(pathMetrics?.sparkles ?? []).map((sparkle) => (
-              <circle
-                key={`sparkle-${sparkle.id}`}
-                cx={sparkle.x}
-                cy={sparkle.y}
-                r={sparkle.radius}
-                fill={sparkle.color}
-                opacity={sparkle.opacity}
-                filter="url(#particleGlow)"
-                className={`thread-body-particle ${sparkle.driftClass}`}
-                style={{
-                  animationDuration: `${sparkle.duration}s`,
-                  animationDelay: `${sparkle.delay}s`,
-                }}
-              />
-            ))}
-          </g>
 
           {/* Milestone Station Anchors, Connectors, Frame Traces & ForeignObject Cards */}
           {APPROVED_HISTORICAL_MILESTONES.map((m) => {
@@ -1762,7 +1712,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                       : "framed-card"
                 }
               >
-                {/* 1. Connector Filament (From Station Anchor to Exact Card Frame Entry Edge) */}
+                {/* 1. Connector Filament (From Station Anchor to Exact Card Dock Edge) */}
                 <path
                   ref={(el) => {
                     connectorRefs.current[m.id] = el;
@@ -1778,6 +1728,25 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                   strokeLinecap="round"
                   style={{ strokeDasharray: 400, strokeDashoffset: 400, opacity: 0 }}
                 />
+
+                {/* Inner Artifact Bridge (connects typoX to closed artifact, erases back to dock when card opens) */}
+                {isExhibitionViewport && geo.innerConnectorD && (
+                  <path
+                    ref={(el) => {
+                      innerConnectorRefs.current[m.id] = el;
+                    }}
+                    id={`inner-connector-${m.id}`}
+                    data-testid={`inner-connector-${m.id}`}
+                    className="pointer-events-none"
+                    d={geo.innerConnectorD}
+                    fill="none"
+                    stroke={m.accentColor || "#1595D0"}
+                    strokeWidth="3"
+                    strokeOpacity="0.98"
+                    strokeLinecap="round"
+                    style={{ strokeDasharray: 120, strokeDashoffset: 120, opacity: 0 }}
+                  />
+                )}
 
                 {/* Left Connector Branch to Pioneer Cutout (Synchronized Reveal, Hidden Until Arrival) */}
                 {isExhibitionViewport && (
@@ -1844,7 +1813,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                       data-testid={`milestone-${m.id}`}
                       data-layout="immersive-split-exhibition"
                       className="group relative flex h-full w-full flex-row items-center pointer-events-auto bg-transparent cursor-default select-none"
-                      style={{ opacity: 0, visibility: "hidden", willChange: "transform, opacity", transform: "translate3d(0,0,0)" }}
+                      style={{ opacity: 0, visibility: "hidden", transform: "translate3d(0,0,0)" }}
                     >
                       {/* Zero-border surface node maintaining smoke test contract */}
                       <div
@@ -1855,19 +1824,19 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                         className="pointer-events-none absolute inset-0 opacity-100 border-0"
                       />
 
-                      {/* Left Wing: Heroic Pioneer Cutout floating in space */}
+                      {/* Left Wing (38%): Heroic Pioneer Cutout floating in space with interactive hover aura */}
                       <div
                         ref={(el) => {
                           portraitRefs.current[m.id] = el;
                         }}
-                        className="relative z-10 flex h-full w-[35%] shrink-0 flex-col items-center justify-center p-2 select-none"
+                        className="group/portrait relative z-10 flex h-full w-[38%] shrink-0 flex-col items-center justify-center p-1 select-none"
                         style={{ opacity: 0, visibility: "hidden" }}
                       >
-                        {/* Ethereal radial back-glow */}
+                        {/* Ethereal radial back-glow (intensifies on hover, zero heavy blur surface) */}
                         <div
-                          className="absolute inset-2 rounded-full pointer-events-none blur-2xl"
+                          className="absolute inset-0 rounded-full pointer-events-none opacity-75 transition-opacity duration-300 [@media(hover:hover)]:group-hover/portrait:opacity-100"
                           style={{
-                            background: `radial-gradient(ellipse at 50% 50%, ${m.glowColor || "rgba(21,149,208,0.22)"}, transparent 68%)`,
+                            background: `radial-gradient(ellipse at 50% 50%, ${m.glowColor || "rgba(21,149,208,0.28)"}, transparent 68%)`,
                           }}
                         />
                         <div className="relative flex min-h-0 w-full flex-1 items-center justify-center">
@@ -1875,39 +1844,46 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                             <img
                               src={m.cutoutUrl || m.silhouetteUrl || m.portraitUrl}
                               alt={`Archival cutout of ${m.person}`}
-                              className="max-h-[440px] w-auto max-w-full object-contain filter transition-transform duration-700 hover:scale-105"
+                              className="max-h-[480px] xl:max-h-[520px] w-auto max-w-full object-contain transition-[transform,filter] duration-300 ease-out [@media(hover:hover)]:group-hover/portrait:scale-[1.04] [@media(hover:hover)]:group-hover/portrait:-translate-y-1 cursor-pointer"
                               style={{
-                                filter: `drop-shadow(0 0 28px ${m.glowColor || "rgba(21,149,208,0.24)"})`,
+                                filter: `drop-shadow(0 0 12px ${m.accentColor || "#1595D0"}90) drop-shadow(0 0 28px ${m.accentColor || "#1595D0"}4A)`,
                               }}
-                              loading="eager"
+                              onClick={() => {
+                                const cur = scrollRefs.current[m.id];
+                                if (cur) cur.playEntrance();
+                              }}
+                              loading={m.id === "PION-01" ? "eager" : "lazy"}
                               decoding="async"
                             />
                           ) : (
                             <div className="flex flex-col items-center justify-center p-6 text-center">
                               <MilestoneThematicSymbol
                                 id={m.id}
-                                className="w-36 h-36 object-contain filter transition-transform duration-700 hover:scale-105"
+                                className="w-40 h-40 object-contain transition-transform duration-300 [@media(hover:hover)]:group-hover/portrait:scale-105"
                                 color={m.accentColor || "#1595D0"}
-                                style={{
-                                  filter: `drop-shadow(0 0 28px ${m.glowColor || "rgba(21,149,208,0.24)"})`,
-                                }}
                               />
                             </div>
                           )}
                         </div>
-                        <span
-                          className="mt-2 block w-full truncate text-center text-[10px] font-mono uppercase tracking-[0.24em] font-semibold"
-                          style={{ color: m.accentColor || "#1595D0" }}
+                        <button
+                          type="button"
+                          onClick={() => scrollRefs.current[m.id]?.playEntrance()}
+                          className="mt-2 inline-flex items-center gap-2 px-3 py-1 rounded-full border bg-[#080C12]/70 backdrop-blur-sm text-[10px] font-mono uppercase tracking-[0.2em] font-semibold transition-[transform,background-color,border-color] duration-200 [@media(hover:hover)]:hover:scale-105 cursor-pointer"
+                          style={{
+                            color: m.accentColor || "#1595D0",
+                            borderColor: `${m.accentColor || "#1595D0"}45`,
+                          }}
+                          aria-label={`Inspect ${m.person} archival record`}
                         >
-                          ✦ {m.yearLabel} · ARCHIVAL RECORD ✦
-                        </span>
+                          <span>✦ {m.yearLabel} · {m.person} ✦</span>
+                        </button>
                       </div>
 
-                      {/* Center Corridor: 30% transparent breathing clearance for thread path */}
-                      <div className="w-[30%] h-full shrink-0 pointer-events-none" />
+                      {/* Center Corridor (21%): Distinct clear gap isolating double helix thread (50%) from right card (59%) */}
+                      <div className="w-[21%] h-full shrink-0 pointer-events-none" />
 
-                      {/* Right Wing: Crystalline Obsidian Scroll with Feather Quill Inscription */}
-                      <div className="relative z-10 flex min-w-0 w-[35%] flex-col justify-center px-2 py-1">
+                      {/* Right Wing (41%): Distinct Wide Sculptural Obsidian Monument */}
+                      <div className="relative z-10 flex min-w-0 w-[41%] flex-col justify-center pl-1 py-1">
                         <div
                           ref={(el) => {
                             identityRefs.current[m.id] = el;
@@ -1916,20 +1892,30 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                           data-testid={`milestone-identity-${m.id}`}
                           className="min-w-0 w-full"
                         >
-                          <div data-testid={`milestone-content-${m.id}`} className="w-full">
-                            <CrystallineObsidianScroll
-                              ref={(handle) => {
-                                scrollRefs.current[m.id] = handle;
+                          <div data-testid={`milestone-content-${m.id}`} className="w-full flex justify-start">
+                            <div
+                              className="w-[540px] shrink-0 flex justify-start origin-left"
+                              style={{
+                                transform: isExhibitionViewport
+                                  ? `scale(${Math.min(
+                                      viewportSize.width < 1200 ? 0.72 : viewportSize.width < 1400 ? 0.84 : 0.90,
+                                      viewportSize.height < 820 ? viewportSize.height / 880 : 1
+                                    ).toFixed(3)})`
+                                  : "scale(0.84)",
+                                transformOrigin: "left center",
                               }}
-                              milestone={m}
-                              cardWidth={geo.cardWidth * 0.35}
-                              cardHeight={geo.cardHeight * 0.88}
-                              accentColor={m.accentColor || "#1595D0"}
-                              glowColor={m.glowColor || "rgba(21, 149, 208, 0.35)"}
-                              isExhibitionViewport={isExhibitionViewport}
-                              prefersReducedMotion={prefersReducedMotion}
-                              onToggleOpen={(open) => handleScrollToggle(m.id, open)}
-                            />
+                            >
+                              <ObsidianExhibit
+                                ref={(handle) => {
+                                  scrollRefs.current[m.id] = handle;
+                                }}
+                                milestone={m}
+                                layoutMode="monument-only"
+                                variant="spatial-artifact"
+                                onProgressChange={(prog) => handleExhibitProgress(m.id, prog)}
+                                prefersReducedMotion={prefersReducedMotion}
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1961,15 +1947,14 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                         className="relative z-10 mb-3 flex items-center gap-4"
                       >
                         <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center shrink-0">
-                          <div className="absolute inset-0 rounded-full bg-[radial-gradient(ellipse_at_50%_50%,rgba(229,169,60,0.2),transparent_70%)] pointer-events-none blur-md" />
+                          <div className="absolute inset-0 rounded-full bg-[radial-gradient(ellipse_at_50%_50%,rgba(229,169,60,0.22),transparent_70%)] pointer-events-none" />
                           {m.cutoutUrl || m.silhouetteUrl || m.portraitUrl ? (
                             <img
                               src={m.cutoutUrl || m.silhouetteUrl || m.portraitUrl}
                               alt={`Archival cutout of ${m.person}`}
-                              className="max-h-full max-w-full object-contain filter drop-shadow-[0_0_16px_rgba(229,169,60,0.3)] transition-all duration-500 hover:scale-105"
-                              loading="eager"
+                              className="max-h-full max-w-full object-contain transition-transform duration-300 [@media(hover:hover)]:hover:scale-105"
+                              loading="lazy"
                               decoding="async"
-                              fetchPriority="high"
                             />
                           ) : (
                             <MilestoneThematicSymbol
@@ -2057,22 +2042,22 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                   fill="none"
                   stroke={m.accentColor || "#1595D0"}
                   strokeWidth="0.85"
-                  strokeOpacity="0.22"
+                  strokeOpacity="0"
+                  style={{ opacity: 0 }}
                 />
               </g>
             );
           })}
 
-          {/* Travelling Golden Bead Halo */}
+          {/* Travelling Golden Bead Halo (radial gradient — zero blur filter) */}
           <circle
             ref={beadGlowRef}
             data-testid="travelling-golden-bead-glow"
             cx={threadX}
-            cy="40"
-            opacity={0.85}
-            r="16"
-            fill="rgba(21, 149, 208, 0.45)"
-            filter="url(#goldenBeadGlow)"
+            cy="350"
+            opacity={0}
+            r="18"
+            fill="url(#beadRadialHalo)"
           />
 
           {/* Travelling Golden Bead Core */}
@@ -2080,8 +2065,8 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
             ref={beadRef}
             data-testid="travelling-golden-bead"
             cx={threadX}
-            cy="40"
-            opacity={1}
+            cy="350"
+            opacity={0}
             r="5"
             fill="#FFF"
             stroke="#1595D0"
@@ -2092,7 +2077,8 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
           <g
             ref={beadParticleClusterRef}
             data-testid="travelling-bead-particle-cluster"
-            transform={`translate(${threadX}, 40)`}
+            transform={`translate(${threadX}, 350)`}
+            opacity={0}
             aria-hidden="true"
           >
             {LIGHT_ORBIT_PARTICLES.map((p, idx) => (
@@ -2102,7 +2088,6 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                 cy={p.dy}
                 r={p.r}
                 fill={p.fill}
-                filter="url(#particleGlow)"
                 className={`particle-suspended ${p.animClass}`}
                 style={{
                   animationDuration: `${p.duration}s`,
@@ -2224,7 +2209,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className="relative h-12 w-12 shrink-0 flex items-center justify-center select-none">
                           <div
-                            className="absolute inset-0 rounded-full pointer-events-none blur-sm"
+                            className="absolute inset-0 rounded-full pointer-events-none"
                             style={{
                               background: `radial-gradient(ellipse at 50% 50%, ${m.glowColor || "rgba(21,149,208,0.22)"}, transparent 70%)`,
                             }}
@@ -2233,13 +2218,9 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                             <img
                               src={m.cutoutUrl || m.silhouetteUrl || m.portraitUrl}
                               alt={`Archival silhouette of ${m.person}`}
-                              className="max-h-full max-w-full object-contain filter"
-                              style={{
-                                filter: `drop-shadow(0 0 8px ${m.glowColor || "rgba(21,149,208,0.3)"})`,
-                              }}
-                              loading="eager"
+                              className="max-h-full max-w-full object-contain"
+                              loading={m.id === "PION-01" ? "eager" : "lazy"}
                               decoding="async"
-                              fetchPriority="high"
                             />
                           ) : (
                             <MilestoneThematicSymbol
@@ -2272,14 +2253,14 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                     </div>
 
                     {/* Accent Field Bottom Capsule */}
-                    <div className="border-t border-white/10 pt-1 flex items-center justify-between text-[8px] font-mono uppercase tracking-[0.06em]">
+                    <div className="border-t border-white/10 pt-1 flex items-center justify-between gap-2 text-[8px] font-mono uppercase tracking-[0.06em]">
                       <span
-                        className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 truncate max-w-[85%]"
+                        className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 truncate min-w-0 flex-1"
                         style={{ color: m.accentColor || "#1595D0" }}
                       >
                         {m.accentField}
                       </span>
-                      <span className="text-[#F5F8FA]/40 font-serif italic text-[8.5px]">ACM-W</span>
+                      <span className="text-[#F5F8FA]/40 font-serif italic text-[8.5px] shrink-0">ACM-W</span>
                     </div>
                   </div>
                 ) : (
@@ -2289,7 +2270,7 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                       <div className="grid grid-cols-[100px_minmax(0,1fr)] items-center gap-3">
                         <div className="flex h-24 w-[100px] items-center justify-center p-1 select-none relative">
                           <div
-                            className="absolute inset-0 rounded-full pointer-events-none blur-md"
+                            className="absolute inset-0 rounded-full pointer-events-none"
                             style={{
                               background: `radial-gradient(ellipse at 50% 50%, ${m.glowColor || "rgba(21,149,208,0.2)"}, transparent 70%)`,
                             }}
@@ -2298,13 +2279,9 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                             <img
                               src={m.cutoutUrl || m.silhouetteUrl || m.portraitUrl}
                               alt={`Archival silhouette of ${m.person}`}
-                              className="max-h-full max-w-full object-contain filter"
-                              style={{
-                                filter: `drop-shadow(0 0 12px ${m.glowColor || "rgba(21,149,208,0.3)"})`,
-                              }}
-                              loading="eager"
+                              className="max-h-full max-w-full object-contain"
+                              loading={m.id === "PION-01" ? "eager" : "lazy"}
                               decoding="async"
-                              fetchPriority="high"
                             />
                           ) : (
                             <MilestoneThematicSymbol
@@ -2383,11 +2360,15 @@ export const ThreadTimeline: React.FC<ThreadTimelineProps> = ({
                     strokeWidth="2"
                     strokeLinecap="round"
                     filter="url(#cardTraceGlow)"
+                    strokeOpacity="0"
+                    style={{ opacity: 0 }}
                   />
                 </svg>
               </article>
             );
           })}
+          </div>
+          </div>
         </div>
       </div>
 

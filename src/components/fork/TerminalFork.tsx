@@ -1382,7 +1382,7 @@ export const TerminalFork: React.FC<TerminalForkProps> = ({
                             onPointerEnter={() => setHoveredBranch(key)}
                             onPointerLeave={() => setHoveredBranch(null)}
                             disabled={isDissolved || (isTransitioningRef.current && !isSelected)}
-                            className={`group relative w-full h-full p-3.5 rounded-2xl flex items-center gap-3.5 backdrop-blur-md transition-all duration-300 touch-none select-none cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1595D0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D131C] min-h-[48px] ${
+                            className={`group relative w-full h-full p-3.5 rounded-2xl flex items-center gap-3.5 backdrop-blur-md transition-[transform,background-color,border-color,box-shadow,opacity] duration-300 touch-none select-none cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1595D0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D131C] min-h-[48px] ${
                               isSelected
                                 ? "bg-gradient-to-b from-[#0B2538] via-[#0D1824] to-[#0A0D14] border-2 border-[#1595D0] shadow-[0_0_48px_rgba(21,149,208,0.55),0_18px_40px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(245,248,250,0.30)] ring-2 ring-[#1595D0] scale-[1.03]"
                                 : isHovered || isDragged
@@ -1445,7 +1445,7 @@ export const TerminalFork: React.FC<TerminalForkProps> = ({
                           onPointerEnter={() => setHoveredBranch(key)}
                           onPointerLeave={() => setHoveredBranch(null)}
                           disabled={isDissolved || (isTransitioningRef.current && !isSelected)}
-                          className={`group relative w-full h-full p-3.5 rounded-2xl flex items-center gap-3.5 backdrop-blur-md transition-all duration-300 touch-none select-none cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D131C] min-h-[48px] ${
+                          className={`group relative w-full h-full p-3.5 rounded-2xl flex items-center gap-3.5 backdrop-blur-md transition-[transform,background-color,border-color,box-shadow,opacity] duration-300 touch-none select-none cursor-pointer text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D131C] min-h-[48px] ${
                             isSelected
                               ? "bg-gradient-to-b from-[#182334] to-[#0D1420] border-2 scale-[1.02]"
                               : isHovered || isDragged
@@ -1613,7 +1613,7 @@ export const TerminalFork: React.FC<TerminalForkProps> = ({
                 onClick={() => handleSelectBranch(key)}
                 data-testid="mobile-fork-branch-centre"
                 disabled={isDissolved || (isTransitioningRef.current && !isSelected)}
-                className={`relative mt-2 flex items-center justify-between p-4 rounded-2xl border backdrop-blur-md transition-all duration-300 min-h-[48px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1595D0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D131C] ${
+                className={`relative mt-2 flex items-center justify-between p-4 rounded-2xl border backdrop-blur-md transition-[transform,background-color,border-color,box-shadow,opacity] duration-300 min-h-[48px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1595D0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D131C] ${
                   isSelected
                     ? "bg-gradient-to-b from-[#0B2538] to-[#0A0D14] border-2 border-[#1595D0] shadow-[0_0_36px_rgba(21,149,208,0.55),inset_0_1px_0_rgba(245,248,250,0.28)] ring-2 ring-[#1595D0]"
                     : "bg-gradient-to-b from-[#091F30]/96 via-[#0A1420]/96 to-[#070A10]/98 border-2 border-[#1595D0]/75 shadow-[0_8px_24px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(245,248,250,0.18)] hover:border-[#1595D0]"
@@ -1667,7 +1667,7 @@ export const TerminalFork: React.FC<TerminalForkProps> = ({
               onClick={() => handleSelectBranch(key)}
               data-testid={`mobile-fork-branch-${config.id}`}
               disabled={isDissolved || (isTransitioningRef.current && !isSelected)}
-              className={`relative flex items-center justify-between p-4 rounded-xl border backdrop-blur-md transition-all duration-300 min-h-[48px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1595D0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D131C] ${
+              className={`relative flex items-center justify-between p-4 rounded-xl border backdrop-blur-md transition-[transform,background-color,border-color,box-shadow,opacity] duration-300 min-h-[48px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1595D0] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D131C] ${
                 isSelected
                   ? "bg-gradient-to-b from-[#182334] to-[#0D1420] border-2 border-[#1595D0] shadow-[0_0_28px_rgba(21,149,208,0.5),inset_0_1px_0_rgba(245,248,250,0.2)] ring-2 ring-[#1595D0]"
                   : "bg-gradient-to-b from-[#121A27]/96 via-[#0C121D]/97 to-[#060910]/98 border border-[#26354D]/90 shadow-[0_8px_24px_rgba(0,0,0,0.65),inset_0_1px_0_rgba(245,248,250,0.1)] hover:border-[#1595D0]/70"

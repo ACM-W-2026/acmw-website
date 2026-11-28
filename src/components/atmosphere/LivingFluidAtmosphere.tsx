@@ -10,11 +10,11 @@ interface PaletteColor {
 }
 
 const APPROVED_PALETTES: PaletteColor[] = [
-  { r: 21, g: 149, b: 208, alpha: 0.18, name: "ACM-W Blue" },
-  { r: 39, g: 143, b: 155, alpha: 0.16, name: "Ocean Teal" },
-  { r: 201, g: 108, b: 142, alpha: 0.16, name: "Dusty Rose" },
-  { r: 237, g: 36, b: 122, alpha: 0.14, name: "ACM-W Pink" },
-  { r: 245, g: 248, b: 250, alpha: 0.12, name: "Soft Pearl" },
+  { r: 212, g: 163, b: 90, alpha: 0.16, name: "Champagne Gold" },
+  { r: 244, g: 199, b: 121, alpha: 0.14, name: "Obsidian Amber" },
+  { r: 39, g: 143, b: 155, alpha: 0.14, name: "Ocean Teal" },
+  { r: 21, g: 149, b: 208, alpha: 0.14, name: "ACM-W Blue" },
+  { r: 245, g: 248, b: 250, alpha: 0.10, name: "Soft Pearl" },
 ];
 
 interface AirPocket {
@@ -74,6 +74,7 @@ interface CelestialMote {
 
 interface LivingFluidAtmosphereProps {
   prefersReducedMotion?: boolean;
+  historyProgressRef?: React.MutableRefObject<number>;
 }
 
 /**
@@ -93,6 +94,7 @@ interface LivingFluidAtmosphereProps {
  */
 export const LivingFluidAtmosphere: React.FC<LivingFluidAtmosphereProps> = ({
   prefersReducedMotion = false,
+  historyProgressRef,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const pointerPosRef = useRef<{ x: number; y: number; vx: number; vy: number; active: boolean }>({
@@ -126,22 +128,22 @@ export const LivingFluidAtmosphere: React.FC<LivingFluidAtmosphereProps> = ({
     // Wake fleck pool
     const flecks: FluidFleck[] = [];
 
-    // Celestial micro-dust motes for ethereal background depth
+    // Celestial starfield specks for deep-space opening clarity
     const celestialMotes: CelestialMote[] = [];
-    const moteCount = isMobile ? 36 : 64;
+    const moteCount = isMobile ? 48 : 88;
     for (let i = 0; i < moteCount; i++) {
       const pal = APPROVED_PALETTES[i % APPROVED_PALETTES.length];
       celestialMotes.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        radius: 0.8 + Math.random() * 1.4,
-        baseAlpha: 0.12 + Math.random() * 0.24,
+        radius: 0.7 + Math.random() * 1.4,
+        baseAlpha: 0.22 + Math.random() * 0.42,
         phase: Math.random() * Math.PI * 2,
-        speed: 0.3 + Math.random() * 0.5,
+        speed: 0.28 + Math.random() * 0.55,
         driftRange: 15 + Math.random() * 25,
-        r: pal.r,
-        g: pal.g,
-        b: pal.b,
+        r: i % 3 === 0 ? 245 : pal.r,
+        g: i % 3 === 0 ? 248 : pal.g,
+        b: i % 3 === 0 ? 252 : pal.b,
       });
     }
 
@@ -729,69 +731,83 @@ export const LivingFluidAtmosphere: React.FC<LivingFluidAtmosphereProps> = ({
       }
 
       // 6. Composite Render (Clear and Set Screen Blend Mode)
+      // At scrollY = 0, screen stays pure void space with only distant twinkling stars;
+      // fluid air pockets fade in smoothly as the user starts scrolling.
+      const currentP = historyProgressRef?.current ?? 0;
+      const nebulaReveal = prefersReducedMotion
+        ? 1
+        : Math.min(1, Math.max(0, (currentP - 0.004) / 0.045));
+
       ctx.clearRect(0, 0, width, height);
       ctx.globalCompositeOperation = "screen";
 
-      // Render Soft Luminous Confluence Blooms First (Between In-Contact Air Pockets)
-      for (let i = 0; i < pockets.length; i++) {
-        for (let j = i + 1; j < pockets.length; j++) {
-          const pA = pockets[i];
-          const pB = pockets[j];
-          const pulseA = 1 + Math.sin(pA.pulsePhase) * 0.06;
-          const pulseB = 1 + Math.sin(pB.pulsePhase) * 0.06;
-          renderLuminousConfluence(pA, pB, pA.radius * pulseA, pB.radius * pulseB);
-        }
-      }
-
-      // Render Fluid Air Pockets (Soft Volumetric Bioluminescent Auras)
-      for (let i = 0; i < pockets.length; i++) {
-        const p = pockets[i];
-        const pulse = 1 + Math.sin(p.pulsePhase) * 0.06;
-        const currentR = Math.max(10, p.radius * pulse);
-
+      if (nebulaReveal > 0.01) {
         ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rotation);
-        ctx.scale(p.scaleX, p.scaleY);
+        ctx.globalAlpha = nebulaReveal;
 
-        // Ultra-smooth multi-stop Gaussian falloff: zero harsh boundaries or polygon cuts
-        const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, currentR);
-        const peakAlpha = Math.min(0.38, (p.alpha + p.burstFlash * 0.20) * p.opacityFactor);
+        // Render Soft Luminous Confluence Blooms First (Between In-Contact Air Pockets)
+        for (let i = 0; i < pockets.length; i++) {
+          for (let j = i + 1; j < pockets.length; j++) {
+            const pA = pockets[i];
+            const pB = pockets[j];
+            const pulseA = 1 + Math.sin(pA.pulsePhase) * 0.06;
+            const pulseB = 1 + Math.sin(pB.pulsePhase) * 0.06;
+            renderLuminousConfluence(pA, pB, pA.radius * pulseA, pB.radius * pulseB);
+          }
+        }
 
-        grad.addColorStop(0, `rgba(${p.r}, ${p.g}, ${p.b}, ${peakAlpha})`);
-        grad.addColorStop(0.26, `rgba(${p.r}, ${p.g}, ${p.b}, ${peakAlpha * 0.68})`);
-        grad.addColorStop(0.56, `rgba(${p.r}, ${p.g}, ${p.b}, ${peakAlpha * 0.26})`);
-        grad.addColorStop(0.82, `rgba(${p.r}, ${p.g}, ${p.b}, ${peakAlpha * 0.06})`);
-        grad.addColorStop(1, `rgba(${p.r}, ${p.g}, ${p.b}, 0)`);
+        // Render Fluid Air Pockets (Soft Volumetric Bioluminescent Auras)
+        for (let i = 0; i < pockets.length; i++) {
+          const p = pockets[i];
+          const pulse = 1 + Math.sin(p.pulsePhase) * 0.06;
+          const currentR = Math.max(10, p.radius * pulse);
 
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(0, 0, currentR, 0, Math.PI * 2);
-        ctx.fill();
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ctx.scale(p.scaleX, p.scaleY);
 
-        // Delicate luminous core on fusion / split flash
-        if (p.burstFlash > 0.05) {
-          const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, currentR * 0.35);
-          coreGrad.addColorStop(0, `rgba(255, 248, 235, ${p.burstFlash * 0.35 * p.opacityFactor})`);
-          coreGrad.addColorStop(1, "rgba(255, 248, 235, 0)");
-          ctx.fillStyle = coreGrad;
+          // Ultra-smooth multi-stop Gaussian falloff: zero harsh boundaries or polygon cuts
+          const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, currentR);
+          const peakAlpha = Math.min(0.38, (p.alpha + p.burstFlash * 0.20) * p.opacityFactor);
+
+          grad.addColorStop(0, `rgba(${p.r}, ${p.g}, ${p.b}, ${peakAlpha})`);
+          grad.addColorStop(0.26, `rgba(${p.r}, ${p.g}, ${p.b}, ${peakAlpha * 0.68})`);
+          grad.addColorStop(0.56, `rgba(${p.r}, ${p.g}, ${p.b}, ${peakAlpha * 0.26})`);
+          grad.addColorStop(0.82, `rgba(${p.r}, ${p.g}, ${p.b}, ${peakAlpha * 0.06})`);
+          grad.addColorStop(1, `rgba(${p.r}, ${p.g}, ${p.b}, 0)`);
+
+          ctx.fillStyle = grad;
           ctx.beginPath();
-          ctx.arc(0, 0, currentR * 0.35, 0, Math.PI * 2);
+          ctx.arc(0, 0, currentR, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Delicate luminous core on fusion / split flash
+          if (p.burstFlash > 0.05) {
+            const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, currentR * 0.35);
+            coreGrad.addColorStop(0, `rgba(255, 248, 235, ${p.burstFlash * 0.35 * p.opacityFactor})`);
+            coreGrad.addColorStop(1, "rgba(255, 248, 235, 0)");
+            ctx.fillStyle = coreGrad;
+            ctx.beginPath();
+            ctx.arc(0, 0, currentR * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          ctx.restore();
+        }
+
+        // Render Slipstream Flecks
+        for (let i = 0; i < flecks.length; i++) {
+          const f = flecks[i];
+          const fleckProgress = f.life / f.maxLife;
+          const currentAlpha = f.maxAlpha * (1 - fleckProgress);
+          ctx.fillStyle = `rgba(${f.r}, ${f.g}, ${f.b}, ${currentAlpha})`;
+          ctx.beginPath();
+          ctx.arc(f.x, f.y, f.radius * (1 - fleckProgress * 0.3), 0, Math.PI * 2);
           ctx.fill();
         }
 
         ctx.restore();
-      }
-
-      // Render Slipstream Flecks
-      for (let i = 0; i < flecks.length; i++) {
-        const f = flecks[i];
-        const fleckProgress = f.life / f.maxLife;
-        const currentAlpha = f.maxAlpha * (1 - fleckProgress);
-        ctx.fillStyle = `rgba(${f.r}, ${f.g}, ${f.b}, ${currentAlpha})`;
-        ctx.beginPath();
-        ctx.arc(f.x, f.y, f.radius * (1 - fleckProgress * 0.3), 0, Math.PI * 2);
-        ctx.fill();
       }
 
       // 7. Update & Render Celestial Micro-Dust Motes (Organic Suspended Particle Field)
@@ -823,10 +839,29 @@ export const LivingFluidAtmosphere: React.FC<LivingFluidAtmosphereProps> = ({
         if (m.x < -10) m.x = width + 10;
         if (m.x > width + 10) m.x = -10;
 
-        const flicker = Math.sin(m.phase * 1.8) * 0.35 + 0.65;
-        const alpha = Math.max(0.04, Math.min(0.40, m.baseAlpha * flicker));
+        // Dynamic narrative spark proximity luminescence (derived from shared historyProgressRef)
+        const currentP = historyProgressRef?.current ?? 0;
+        const anchorP = 0.12;
+        const encounterRadius = 0.045;
+        const delta = Math.abs(currentP - anchorP);
+        let goldLum = 0;
+        if (delta < encounterRadius) {
+          const encounterProgress = (currentP - (anchorP - encounterRadius)) / (2 * encounterRadius);
+          const focusY = height * (0.20 + 0.50 * Math.max(0, Math.min(1, encounterProgress)));
+          const distY = Math.abs(m.y - focusY);
+          if (distY < height * 0.25) {
+            goldLum = (1 - delta / encounterRadius) * (1 - distY / (height * 0.25));
+          }
+        }
 
-        ctx.fillStyle = `rgba(${m.r}, ${m.g}, ${m.b}, ${alpha})`;
+        const flicker = Math.sin(m.phase * 1.8) * 0.32 + 0.68;
+        const alpha = Math.max(0.06, Math.min(0.74, m.baseAlpha * flicker + goldLum * 0.18));
+
+        if (goldLum > 0.1) {
+          ctx.fillStyle = `rgba(244, 199, 121, ${alpha})`;
+        } else {
+          ctx.fillStyle = `rgba(${m.r}, ${m.g}, ${m.b}, ${alpha})`;
+        }
         ctx.beginPath();
         ctx.arc(m.x, m.y, m.radius, 0, Math.PI * 2);
         ctx.fill();

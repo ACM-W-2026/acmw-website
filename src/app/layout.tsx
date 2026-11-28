@@ -13,6 +13,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="scroll-smooth bg-[#0D131C] text-[#F5F8FA]">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: "if('scrollRestoration' in history){history.scrollRestoration='manual';}window.addEventListener('beforeunload',function(){window.scrollTo(0,0);});",
+          }}
+        />
+      </head>
       <body className="min-h-screen bg-[#0D131C] text-[#F5F8FA] antialiased">
         <a
           href="#main-content"

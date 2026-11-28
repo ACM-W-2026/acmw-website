@@ -12,6 +12,7 @@ import {
   calculateJourneyScrollRanges,
   clampJourneyProgress,
   mapJourneyProgress,
+  mapCameraWorldOffset,
   JOURNEY_SCROLL_RESPONSE_SECONDS,
   JOURNEY_SCROLL_RESPONSE_EASE,
 } from "../../state/journeyScroll";
@@ -79,6 +80,16 @@ export function computeAmbientHueWeights(
  * a sequential history range followed by a viewport-aware seven-way fork range.
  * There is intentionally no second ScrollTrigger and no numeric scrub catch-up.
  */
+const FACET_TRANSITION_COLORS: Record<string, string> = {
+  about: "#1595D0",
+  events: "#278F9B",
+  projects: "#C96C8E",
+  outreach: "#1595D0",
+  team: "#278F9B",
+  "join-us": "#ED247A",
+  home: "#D4A35A",
+};
+
 export const TimelinePage: React.FC<TimelinePageProps> = ({
   onNavigateFacet,
   onNavigateHome,
@@ -96,19 +107,53 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
     sync: null,
     historyMap: null,
   });
+  const historyProgressRef = useRef<number>(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [routeTransitionColor, setRouteTransitionColor] = useState<string | null>(null);
+
+  const navigateWithThreadTransition = (color: string, navigateFn: () => void) => {
+    if (prefersReducedMotion || typeof document === "undefined") {
+      navigateFn();
+      return;
+    }
+    setRouteTransitionColor(color);
+    const docWithVT = document as Document & {
+      startViewTransition?: (cb: () => void) => { finished: Promise<void> };
+    };
+    if (typeof docWithVT.startViewTransition === "function") {
+      docWithVT.startViewTransition(() => navigateFn());
+      return;
+    }
+    window.setTimeout(navigateFn, 160);
+  };
 
   const handleNavigateFacet = (facetId: FacetId, route: string) => {
-    if (onNavigateFacet) onNavigateFacet(facetId, route);
-    else router.push(route);
+    if (onNavigateFacet) {
+      onNavigateFacet(facetId, route);
+      return;
+    }
+    navigateWithThreadTransition(FACET_TRANSITION_COLORS[facetId] || "#1595D0", () => {
+      router.push(route);
+    });
   };
 
   const handleNavigateHome = () => {
-    if (onNavigateHome) onNavigateHome();
-    else router.push("/home");
+    if (onNavigateHome) {
+      onNavigateHome();
+      return;
+    }
+    navigateWithThreadTransition(FACET_TRANSITION_COLORS.home, () => {
+      router.push("/home");
+    });
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      if ("scrollRestoration" in window.history) {
+        window.history.scrollRestoration = "manual";
+      }
+      window.scrollTo(0, 0);
+    }
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     setPrefersReducedMotion(mediaQuery.matches);
     const handleChange = (event: MediaQueryListEvent) => {
@@ -195,21 +240,33 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         nativeHistoryProgress,
         progressRegistryRef.current.historyMap
       );
+      const cameraOffsetPx = mapCameraWorldOffset(
+        nativeHistoryProgress,
+        progressRegistryRef.current.historyMap,
+        Math.max(0, ranges.historyEnd - ranges.historyStart)
+      );
       const forkProgress = clampJourneyProgress(
         scrollY,
         ranges.forkStart,
         ranges.forkEnd
       );
 
-      progressRegistryRef.current.history?.(historyProgress);
+      progressRegistryRef.current.history?.(historyProgress, cameraOffsetPx);
       progressRegistryRef.current.fork?.(forkProgress);
+      historyProgressRef.current = historyProgress;
 
       if (!prefersReducedMotion) {
+        const atmoFade = Math.min(1, Math.max(0, (historyProgress - 0.004) / 0.045));
+        if (ambientLayerRef.current) {
+          ambientLayerRef.current.style.opacity = (0.4 * atmoFade).toFixed(3);
+        }
         const [o1, o2, o3, o4] = computeAmbientHueWeights(historyProgress, forkProgress);
         if (orb1Ref.current) orb1Ref.current.style.opacity = String(o1);
         if (orb2Ref.current) orb2Ref.current.style.opacity = String(o2);
         if (orb3Ref.current) orb3Ref.current.style.opacity = String(o3);
         if (orb4Ref.current) orb4Ref.current.style.opacity = String(o4);
+      } else if (ambientLayerRef.current) {
+        ambientLayerRef.current.style.opacity = "0.4";
       }
 
       // Exposed only as lightweight telemetry for the browser acceptance suite.
@@ -229,20 +286,34 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         window.innerWidth < 1024);
     const scrollResponseDuration = isTouchOrMobile
       ? 0.02
-      : JOURNEY_SCROLL_RESPONSE_SECONDS;
+      : 0.28;
 
-    // quickTo reuses one tween while scroll updates retarget it. The short,
-    // non-overshooting tail makes the travelling light and frame formation
-    // perceptible during fast input, without delaying or hijacking native scroll.
+    // quickTo reuses one tween while scroll updates retarget it. A smooth desktop
+    // glide absorbs discrete mouse-wheel jumps while fast programmatic/End-Home jumps
+    // catch up crisply without lagging behind native scroll.
     const easeStoryProgressToScroll = gsap.quickTo(
       renderedScrollPosition,
       "value",
       {
         duration: scrollResponseDuration,
-        ease: JOURNEY_SCROLL_RESPONSE_EASE,
+        ease: isTouchOrMobile ? JOURNEY_SCROLL_RESPONSE_EASE : "power2.out",
         onUpdate: () => applyProgress(renderedScrollPosition.value),
       }
     );
+
+    const targetRenderedScroll = (targetY: number) => {
+      if (!isTouchOrMobile && easeStoryProgressToScroll.tween) {
+        const delta = Math.abs(targetY - renderedScrollPosition.value);
+        const nextDuration =
+          delta > 2400
+            ? 0.12
+            : delta > 220
+              ? Math.min(0.68, Math.max(scrollResponseDuration, delta / 1450))
+              : scrollResponseDuration;
+        easeStoryProgressToScroll.tween.duration(nextDuration);
+      }
+      easeStoryProgressToScroll(targetY);
+    };
 
     const syncCurrentPosition = () => {
       const scrollY = window.scrollY;
@@ -250,7 +321,7 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
       if (Math.abs(renderedScrollPosition.value - scrollY) < 0.5) {
         applyProgress(scrollY);
       } else {
-        easeStoryProgressToScroll(scrollY);
+        targetRenderedScroll(scrollY);
       }
     };
 
@@ -274,11 +345,11 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         if (Math.abs(renderedScrollPosition.value - scrollY) < 0.5) {
           applyProgress(scrollY);
         } else {
-          easeStoryProgressToScroll(scrollY);
+          targetRenderedScroll(scrollY);
         }
       },
       onUpdate: (self) => {
-        easeStoryProgressToScroll(self.scroll());
+        targetRenderedScroll(self.scroll());
       },
     });
     page.dataset.masterTriggerEnd = String(masterTrigger.end);
@@ -369,13 +440,20 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         className="fixed inset-0 pointer-events-none z-0 overflow-hidden"
       >
         {/* Dynamic Fluid Air Pockets Physics Simulation (Collision, Coalescence, Mitosis Budding) */}
-        <LivingFluidAtmosphere prefersReducedMotion={prefersReducedMotion} />
+        <LivingFluidAtmosphere
+          prefersReducedMotion={prefersReducedMotion}
+          historyProgressRef={historyProgressRef}
+        />
 
-        {/* Ambient Depth Orbs Layer */}
+        {/* Ambient Depth Orbs Layer (starts pure void black at scrollY = 0, fades in on scroll) */}
         <div
           ref={ambientLayerRef}
-          className="absolute inset-0 w-full h-full pointer-events-none opacity-40 mix-blend-screen"
-          style={{ willChange: "transform", transform: "translate3d(0,0,0)" }}
+          className="absolute inset-0 w-full h-full pointer-events-none mix-blend-screen"
+          style={{
+            opacity: prefersReducedMotion ? 0.4 : 0,
+            willChange: "transform",
+            transform: "translate3d(0,0,0)",
+          }}
         >
           {/* Orb 1: Upper-Right Ocean Teal / Early Era Depth Pocket */}
           <div
@@ -464,21 +542,21 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
               }}
             />
           </div>
+        {/* Subtle Organic Shimmer Sweep inside ambientLayerRef so opening void remains pure */}
+          <div
+            className="acmw-atmosphere-sweep absolute inset-0 opacity-60 pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(118deg, transparent 20%, rgba(39,143,155,0.035) 42%, rgba(201,108,142,0.025) 58%, transparent 75%)",
+            }}
+          />
         </div>
-
-        {/* Subtle Organic Shimmer Sweep across the whole journey */}
-        <div
-          className="acmw-atmosphere-sweep absolute inset-0 opacity-40 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(118deg, transparent 20%, rgba(39,143,155,0.035) 42%, rgba(201,108,142,0.025) 58%, transparent 75%)",
-          }}
-        />
       </div>
 
       {/* Both visual stages share one page-level native-scroll progress controller. */}
       <ThreadTimeline
         journeyProgressRef={progressRegistryRef}
+        historyProgressRef={historyProgressRef}
         onSkipToFork={handleSkipToFork}
         onSkipToHome={handleNavigateHome}
       />
@@ -488,6 +566,18 @@ export const TimelinePage: React.FC<TimelinePageProps> = ({
         onSelectFacet={handleNavigateFacet}
         onSelectCentre={handleNavigateHome}
       />
+
+      {/* Chromatic Thread Portal Veil during Terminal Fork -> Facet route transitions */}
+      {routeTransitionColor && (
+        <div
+          aria-hidden="true"
+          data-testid="thread-portal-transition-veil"
+          className="acmw-thread-portal-veil fixed inset-0 z-50 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at 50% 60%, ${routeTransitionColor}38 0%, #04070C 72%)`,
+          }}
+        />
+      )}
     </main>
   );
 };

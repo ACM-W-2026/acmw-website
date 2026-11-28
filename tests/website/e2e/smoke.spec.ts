@@ -46,9 +46,10 @@ test.describe("The Thread We Carry & Terminal Fork Journey", () => {
     // Verify initial state
     await expect(journeyPage).toHaveAttribute("data-history-progress", /^0(\.0+)?$/);
 
-    // Verify presence of spark bead and living atmosphere
+    // Verify presence of spark bead, rotating helix canvas, and living atmosphere
     const spark = page.locator('[data-testid="travelling-golden-bead"]');
     await expect(spark).toBeAttached();
+    await expect(page.locator('[data-testid="living-helix-overlay"]')).toBeAttached();
     await expect(page.locator('[data-testid="timeline-living-atmosphere"]')).toBeAttached();
     await page.waitForTimeout(600);
 
@@ -73,6 +74,30 @@ test.describe("The Thread We Carry & Terminal Fork Journey", () => {
 
     const resetProgress = await journeyPage.getAttribute("data-history-progress");
     expect(Number(resetProgress)).toBeLessThan(0.1);
+  });
+
+  test("reloading page resets scroll to origin and maintains clean void initial presentation", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForTimeout(400);
+
+    // Scroll to mid-timeline
+    await page.evaluate(() => window.scrollTo({ top: 1800, behavior: "instant" }));
+    await page.waitForTimeout(300);
+
+    // Reload page
+    await page.reload();
+    await page.waitForTimeout(400);
+
+    // Assert scroll position was cleanly reset by manual scroll restoration
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeLessThanOrEqual(50);
+
+    // Assert frame trace has 0 opacity initially
+    const frameTrace = page.locator('#frame-trace-PION-01');
+    if ((await frameTrace.count()) > 0) {
+      const opacity = await frameTrace.evaluate((el) => window.getComputedStyle(el).opacity);
+      expect(Number(opacity)).toBe(0);
+    }
   });
 
   test("terminal fork enables selecting a facet strand and navigating", async ({ page }) => {

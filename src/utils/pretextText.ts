@@ -11,6 +11,7 @@ const preparedCache = new Map<string, ReturnType<typeof prepare>>();
 
 function isCanvasSupported(): boolean {
   if (typeof OffscreenCanvas !== "undefined") return true;
+  if (typeof navigator !== "undefined" && /jsdom/i.test(navigator.userAgent)) return false;
   if (typeof document !== "undefined" && typeof document.createElement === "function") {
     try {
       const c = document.createElement("canvas");

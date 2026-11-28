@@ -5,6 +5,8 @@ import { TerminalFork } from "@/components/fork/TerminalFork";
 import { ThreadTimeline } from "@/components/timeline/ThreadTimeline";
 import { MilestoneThematicSymbol } from "@/components/timeline/MilestoneThematicSymbols";
 import { LivingMosaic } from "@/components/mosaic/LivingMosaic";
+import { ObsidianExhibit, getPioneerTheme } from "@/components/exhibit/ObsidianExhibit";
+import { APPROVED_HISTORICAL_MILESTONES, HISTORICAL_MILESTONES } from "@/data/historicalMilestones";
 
 describe("Component Rendering & Visual Hierarchy Suite", () => {
   it("renders MilestoneThematicSymbol with id, className, color, and style", () => {
@@ -198,5 +200,52 @@ describe("Component Rendering & Visual Hierarchy Suite", () => {
         `PALETTE VIOLATION: Prohibited color token "${hex}" found in rendered component HTML!`
       ).toBe(false);
     }
+  });
+
+  it("renders ObsidianExhibit in initial deterministic closed state for Ada Lovelace", () => {
+    const ada = HISTORICAL_MILESTONES[0];
+    const html = renderToStaticMarkup(
+      <ObsidianExhibit
+        milestone={ada}
+        progress={0}
+        variant="spatial-artifact"
+        layoutMode="monument-only"
+      />
+    );
+
+    // Initial closed SSR state includes closed-init class
+    expect(html).toContain("obsidian-closed-init");
+    // Contains Ada's historical title and role
+    expect(html).toContain("Ada Lovelace");
+    // Vector analytical engine artifact hopper present
+    expect(html).toContain("ada-brass-gear");
+    // Verified accessible region label
+    expect(html).toContain('role="region"');
+    // Suppresses duplicate portrait card and fake center thread line in monument-only mode
+    expect(html).not.toContain("PRIMARY ARCHIVE:");
+    expect(html).not.toContain("M 4,20 C 16,20");
+  });
+
+  it("verifies static SSR concealment of SVG frame traces in ThreadTimeline", () => {
+    const html = renderToStaticMarkup(
+      <ThreadTimeline
+        journeyProgressRef={{ current: { history: null, fork: null, sync: null, historyMap: null } }}
+      />
+    );
+
+    // Frame trace must have strokeOpacity 0 on SSR to prevent reload FOUC
+    expect(html).toContain('id="frame-trace-PION-01"');
+    expect(html).toContain('stroke-opacity="0"');
+    expect(html).not.toContain('id="frame-trace-PION-01" stroke-opacity="0.22"');
+  });
+
+  it("synchronizes ObsidianExhibit theme accents with canonical milestone thread colors", () => {
+    for (const milestone of APPROVED_HISTORICAL_MILESTONES) {
+      const theme = getPioneerTheme(milestone.id, milestone.accentColor);
+      expect(theme.accentColor).toBe(milestone.accentColor);
+    }
+    const feifeiTheme = getPioneerTheme("PION-06");
+    expect(feifeiTheme.accentColor).toBe("#ED247A");
+    expect(feifeiTheme.goldTrim).toBe("#ED247A");
   });
 });
