@@ -100,8 +100,8 @@ describe("Gated Asset Exclusion & Next.js Build-Artifact Protection", () => {
       }
     }
 
-    // Exactly 31 approved assets present in public/ (6 historical pioneers portraits, cutouts, silhouettes + 7 documents)
-    expect(allPublicFiles.length).toBe(31);
+    // Exactly 25 approved assets present in public/ (6 historical pioneers portraits, cutouts, silhouettes in WebP/JPG + 7 documents)
+    expect(allPublicFiles.length).toBe(25);
   });
 
   it("verifies Next.js production build output exists and contains zero gated assets", () => {
